@@ -91,7 +91,7 @@
       opacity: 1;
     }
 
-    /* Container untuk Layer 2 yang ditarik via Fetch */
+    /* Container Layer 2 */
     #layer2-container {
       position: absolute;
       top: 0;
@@ -129,7 +129,6 @@
     </div>
   </div>
 
-  <!-- Tempat masuknya layer2.html secara dinamis -->
   <div id="layer2-container"></div>
 
   <script>
@@ -230,7 +229,7 @@
     window.addEventListener('touchstart', initAudio);
     window.addEventListener('mousemove', initAudio, { once: true });
 
-    // --- CANVAS STARFIELD & LAYERED BLACK HOLE ---
+    // --- CANVAS STARFIELD & LAYERED BLACK HOLE (ORIGINAL) ---
     const canvas = document.getElementById('space-canvas');
     const ctx = canvas.getContext('2d');
 
@@ -378,6 +377,19 @@
           targetCtx.fillStyle = gradient;
           targetCtx.arc(x, y, rad * 2.5, 0, Math.PI * 2);
           targetCtx.fill();
+
+          if (star.hasFlare && star.radius > 1.5) {
+            targetCtx.strokeStyle = `rgba(${star.color.r}, ${star.color.g}, ${star.color.b}, ${currentAlpha * 0.35})`;
+            targetCtx.lineWidth = 0.5;
+            const flareLen = star.radius * 4;
+
+            targetCtx.beginPath();
+            targetCtx.moveTo(x - flareLen, y);
+            targetCtx.lineTo(x + flareLen, y);
+            targetCtx.moveTo(x, y - flareLen);
+            targetCtx.lineTo(x, y + flareLen);
+            targetCtx.stroke();
+          }
         }
         targetCtx.restore();
       }
@@ -397,7 +409,23 @@
 
       if (isGlitching && glitchDuration > 0) {
         glitchDuration--;
-        renderStarfield(ctx, (Math.random() - 0.5) * 18, 0, { r: 255, g: 30, b: 60 });
+        const redOffset = (Math.random() - 0.5) * 18;
+        const blueOffset = (Math.random() - 0.5) * 18;
+
+        ctx.globalCompositeOperation = 'screen';
+        renderStarfield(ctx, redOffset, (Math.random() - 0.5) * 4, { r: 255, g: 30, b: 60 });
+        renderStarfield(ctx, 0, 0, { r: 30, g: 255, b: 120 });
+        renderStarfield(ctx, blueOffset, (Math.random() - 0.5) * 4, { r: 30, g: 120, b: 255 });
+        ctx.globalCompositeOperation = 'source-over';
+
+        const sliceCount = Math.floor(Math.random() * 4) + 1;
+        for (let i = 0; i < sliceCount; i++) {
+          const sliceY = Math.random() * height;
+          const sliceH = Math.random() * 30 + 5;
+          const sliceX = (Math.random() - 0.5) * 25;
+          ctx.drawImage(canvas, 0, sliceY, width, sliceH, sliceX, sliceY, width, sliceH);
+        }
+
         if (glitchDuration <= 0) isGlitching = false;
       } else {
         renderStarfield(ctx);
@@ -427,7 +455,6 @@
       setTimeout(() => { errorEl.classList.remove('visible'); }, 1800);
     }
 
-    // Fungsi untuk meload file layer2.html secara dinamis
     function loadLayer2() {
       fetch('layer2.html')
         .then(response => response.text())
@@ -447,14 +474,10 @@
           playSuccessSound();
           errorEl.classList.remove('visible');
           
-          // Sembunyikan layer 1
           layer1.style.opacity = '0';
           layer1.style.visibility = 'hidden';
-
-          // Aktifkan lubang hitam (tetap ada di layar)
           blackHoleActive = true;
 
-          // Tarik dan tampilkan file layer2.html setelah jeda singkat
           setTimeout(() => {
             loadLayer2();
           }, 800);
