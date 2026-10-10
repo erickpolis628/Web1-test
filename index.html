@@ -91,8 +91,8 @@
       opacity: 1;
     }
 
-    /* Container Layer 2 */
-    #layer2-container {
+    /* Layer 2 */
+    #layer2 {
       position: absolute;
       top: 0;
       left: 0;
@@ -105,16 +105,30 @@
       align-items: center;
       opacity: 0;
       visibility: hidden;
+      transition: opacity 2s ease, visibility 2s ease;
       pointer-events: none;
-      transition: opacity 2s cubic-bezier(0.16, 1, 0.3, 1), transform 2s cubic-bezier(0.16, 1, 0.3, 1);
-      transform: scale(0.95);
     }
 
-    #layer2-container.active {
+    #layer2.active {
       opacity: 1;
       visibility: visible;
       pointer-events: auto;
-      transform: scale(1);
+    }
+
+    .layer2-text {
+      font-size: 2.2rem;
+      font-weight: 300;
+      letter-spacing: 0.6rem;
+      color: #ffffff;
+      text-align: center;
+      text-shadow: 0 0 20px rgba(255, 255, 255, 0.9), 0 0 40px rgba(200, 220, 255, 0.4);
+      animation: softPulse 4s ease-in-out infinite alternate;
+      z-index: 10;
+    }
+
+    @keyframes softPulse {
+      0% { opacity: 0.8; transform: scale(0.98); }
+      100% { opacity: 1; transform: scale(1.02); }
     }
   </style>
 </head>
@@ -129,18 +143,25 @@
     </div>
   </div>
 
-  <div id="layer2-container"></div>
+  <div id="layer2">
+    <h1 class="layer2-text">Are You Ready?</h1>
+  </div>
 
   <script>
-    // --- SYSTEM AUDIO ---
+    // --- SYSTEM AUDIO (Versi Pertama yang Diperbaiki Tanpa Crack/Pop) ---
     let audioCtx = null;
     let isAudioActive = false;
 
     function initAudio() {
       if (isAudioActive) return;
+
       const AudioContext = window.AudioContext || window.webkitAudioContext;
       audioCtx = new AudioContext();
-      if (audioCtx.state === 'suspended') { audioCtx.resume(); }
+
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+
       isAudioActive = true;
       playOriginalSpaceAmbient();
 
@@ -152,10 +173,13 @@
 
     function playOriginalSpaceAmbient() {
       const now = audioCtx.currentTime;
+
       const bufferSize = audioCtx.sampleRate * 2;
       const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
       const output = noiseBuffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) { output[i] = Math.random() * 2 - 1; }
+      for (let i = 0; i < bufferSize; i++) {
+        output[i] = Math.random() * 2 - 1;
+      }
 
       const whiteNoise = audioCtx.createBufferSource();
       whiteNoise.buffer = noiseBuffer;
@@ -169,6 +193,7 @@
       lfo.frequency.setValueAtTime(0.05, now);
       const lfoGain = audioCtx.createGain();
       lfoGain.gain.setValueAtTime(80, now);
+
       lfo.connect(lfoGain);
       lfoGain.connect(filter.frequency);
 
@@ -187,6 +212,7 @@
     function playGlitchSound() {
       if (!audioCtx) return;
       const now = audioCtx.currentTime;
+
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
 
@@ -200,6 +226,7 @@
 
       osc.connect(gain);
       gain.connect(audioCtx.destination);
+
       osc.start(now);
       osc.stop(now + 0.2);
     }
@@ -207,6 +234,7 @@
     function playSuccessSound() {
       if (!audioCtx) return;
       const now = audioCtx.currentTime;
+
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
 
@@ -220,6 +248,7 @@
 
       osc.connect(gain);
       gain.connect(audioCtx.destination);
+
       osc.start(now);
       osc.stop(now + 2.5);
     }
@@ -229,7 +258,7 @@
     window.addEventListener('touchstart', initAudio);
     window.addEventListener('mousemove', initAudio, { once: true });
 
-    // --- CANVAS STARFIELD & LAYERED BLACK HOLE (ORIGINAL) ---
+    // --- CANVAS STARFIELD & LAYERED BLACK HOLE ---
     const canvas = document.getElementById('space-canvas');
     const ctx = canvas.getContext('2d');
 
@@ -248,6 +277,7 @@
 
     const STAR_COUNT = 300;
     let stars = [];
+
     const starColors = [
       { r: 255, g: 255, b: 255 },
       { r: 235, g: 242, b: 255 },
@@ -272,6 +302,7 @@
       }
     }
 
+    // Partikel Accretion Disk (Kiri di atas lubang, Kanan di belakang lubang)
     let blackHoleActive = false;
     let blackHoleScale = 0;
     const bhParticles = [];
@@ -290,6 +321,7 @@
       ctx.save();
       ctx.translate(cx, cy);
 
+      // 1. Gravitational Lensing Halo (Pendaran Belakang)
       const haloGrad = ctx.createRadialGradient(0, 0, 30 * scale, 0, 0, 180 * scale);
       haloGrad.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
       haloGrad.addColorStop(0.2, 'rgba(180, 200, 255, 0.4)');
@@ -301,6 +333,7 @@
       ctx.arc(0, 0, 180 * scale, 0, Math.PI * 2);
       ctx.fill();
 
+      // Pisahkan partikel berdasarkan posisi X (Kanan = Belakang, Kiri = Atas/Depan)
       const backParticles = [];
       const frontParticles = [];
 
@@ -312,8 +345,10 @@
 
         const px = Math.cos(p.angle) * p.dist * scale;
         const py = Math.sin(p.angle) * (p.dist * 0.35) * scale;
+
         const particleData = { px, py, size: p.size * scale, alpha: p.alpha * scale };
 
+        // Sisi Kanan (cos(angle) > 0) berada di belakang lubang, Sisi Kiri (cos(angle) <= 0) berada di atas/depan lubang
         if (Math.cos(p.angle) > 0) {
           backParticles.push(particleData);
         } else {
@@ -321,6 +356,7 @@
         }
       }
 
+      // --- LAYER A: PARTIKEL BELAKANG (Sisi Kanan) ---
       for (let i = 0; i < backParticles.length; i++) {
         const pt = backParticles[i];
         ctx.beginPath();
@@ -329,6 +365,7 @@
         ctx.fill();
       }
 
+      // --- LAYER B: EVENT HORIZON (Bola Hitam) ---
       const coreGrad = ctx.createRadialGradient(0, 0, 25 * scale, 0, 0, 38 * scale);
       coreGrad.addColorStop(0, '#000000');
       coreGrad.addColorStop(0.85, '#000000');
@@ -339,6 +376,7 @@
       ctx.arc(0, 0, 38 * scale, 0, Math.PI * 2);
       ctx.fill();
 
+      // --- LAYER C: PARTIKEL DEPAN/ATAS (Sisi Kiri) ---
       for (let i = 0; i < frontParticles.length; i++) {
         const pt = frontParticles[i];
         ctx.beginPath();
@@ -357,10 +395,12 @@
       for (let i = 0; i < stars.length; i++) {
         const star = stars[i];
         const currentAlpha = Math.max(0.1, star.baseAlpha + Math.sin(star.twinklePhase) * 0.25);
+
         const x = star.x + offsetX;
         const y = star.y + offsetY;
 
         targetCtx.save();
+
         if (colorOverride) {
           targetCtx.beginPath();
           targetCtx.fillStyle = `rgba(${colorOverride.r}, ${colorOverride.g}, ${colorOverride.b}, ${currentAlpha})`;
@@ -391,6 +431,7 @@
             targetCtx.stroke();
           }
         }
+
         targetCtx.restore();
       }
     }
@@ -401,6 +442,7 @@
         star.x += vx;
         star.y += vy;
         star.twinklePhase += star.twinkleSpeed;
+
         if (star.x < -10) star.x = width + 10;
         if (star.y < -10) star.y = height + 10;
       }
@@ -409,13 +451,16 @@
 
       if (isGlitching && glitchDuration > 0) {
         glitchDuration--;
+
         const redOffset = (Math.random() - 0.5) * 18;
         const blueOffset = (Math.random() - 0.5) * 18;
 
         ctx.globalCompositeOperation = 'screen';
+
         renderStarfield(ctx, redOffset, (Math.random() - 0.5) * 4, { r: 255, g: 30, b: 60 });
         renderStarfield(ctx, 0, 0, { r: 30, g: 255, b: 120 });
         renderStarfield(ctx, blueOffset, (Math.random() - 0.5) * 4, { r: 30, g: 120, b: 255 });
+
         ctx.globalCompositeOperation = 'source-over';
 
         const sliceCount = Math.floor(Math.random() * 4) + 1;
@@ -426,13 +471,17 @@
           ctx.drawImage(canvas, 0, sliceY, width, sliceH, sliceX, sliceY, width, sliceH);
         }
 
-        if (glitchDuration <= 0) isGlitching = false;
+        if (glitchDuration <= 0) {
+          isGlitching = false;
+        }
       } else {
         renderStarfield(ctx);
       }
 
       if (blackHoleActive) {
-        if (blackHoleScale < 1.5) blackHoleScale += 0.01;
+        if (blackHoleScale < 1.5) {
+          blackHoleScale += 0.01;
+        }
         renderLayeredBlackHole(width / 2, height / 2, blackHoleScale);
       }
 
@@ -445,42 +494,34 @@
     const inputEl = document.getElementById('codeInput');
     const errorEl = document.getElementById('errorMsg');
     const layer1 = document.getElementById('layer1');
-    const layer2Container = document.getElementById('layer2-container');
+    const layer2 = document.getElementById('layer2');
 
     function triggerGlitch() {
       isGlitching = true;
       glitchDuration = 20;
       playGlitchSound();
+      
       errorEl.classList.add('visible');
-      setTimeout(() => { errorEl.classList.remove('visible'); }, 1800);
-    }
-
-    function loadLayer2() {
-      fetch('layer2.html')
-        .then(response => response.text())
-        .then(html => {
-          layer2Container.innerHTML = html;
-          setTimeout(() => {
-            layer2Container.classList.add('active');
-          }, 100);
-        })
-        .catch(err => console.error('Gagal meload layer 2:', err));
+      setTimeout(() => {
+        errorEl.classList.remove('visible');
+      }, 1800);
     }
 
     inputEl.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         const value = inputEl.value.trim();
+
         if (value.toLowerCase() === 'phi') {
           playSuccessSound();
           errorEl.classList.remove('visible');
-          
           layer1.style.opacity = '0';
           layer1.style.visibility = 'hidden';
+
           blackHoleActive = true;
 
           setTimeout(() => {
-            loadLayer2();
-          }, 800);
+            layer2.classList.add('active');
+          }, 600);
         } else {
           triggerGlitch();
         }
