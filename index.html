@@ -31,57 +31,37 @@
       z-index: 1;
     }
 
-    /* Prompt Khusus Mobile: Changes to Desktop */
+    /* Peringatan Permanen untuk HP yang Belum Mode Desktop */
     #mobile-prompt {
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      z-index: 10;
+      z-index: 100;
       background-color: #030308;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      padding: 20px;
+      padding: 30px;
       text-align: center;
-      transition: opacity 0.5s ease;
-    }
-
-    #mobile-prompt.hidden {
-      opacity: 0;
-      visibility: hidden;
-      pointer-events: none;
-      display: none !important;
     }
 
     .mobile-title {
       font-size: 1.8rem;
       font-weight: 400;
       letter-spacing: 0.3rem;
-      margin-bottom: 25px;
+      margin-bottom: 15px;
       text-shadow: 0 0 15px rgba(255, 255, 255, 0.6);
     }
 
-    .desktop-btn {
-      background: transparent;
-      border: 1px solid rgba(255, 255, 255, 0.4);
-      color: #ffffff;
-      padding: 12px 30px;
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 0.95rem;
-      letter-spacing: 0.2rem;
-      text-transform: uppercase;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      box-shadow: 0 0 15px rgba(255, 255, 255, 0.05);
-    }
-
-    .desktop-btn:hover {
-      border-color: #ffffff;
-      background: rgba(255, 255, 255, 0.1);
-      box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+    .mobile-desc {
+      font-size: 0.9rem;
+      color: rgba(255, 255, 255, 0.6);
+      letter-spacing: 0.1rem;
+      max-width: 320px;
+      line-height: 1.6;
     }
 
     /* Layer 1 */
@@ -189,10 +169,10 @@
 
   <canvas id="space-canvas"></canvas>
 
-  <!-- Prompt khusus untuk pengguna HP -->
+  <!-- Peringatan Permanen untuk Perangkat Mobile (Akan otomatis hilang jika browser diubah ke Desktop Mode) -->
   <div id="mobile-prompt">
     <h2 class="mobile-title">Changes to Desktop</h2>
-    <button id="desktopBtn" class="desktop-btn">Desktop Mode</button>
+    <p class="mobile-desc">Silakan aktifkan opsi "Situs Desktop" / "Desktop site" pada menu titik tiga browser Anda untuk mengakses portal ini.</p>
   </div>
 
   <div id="layer1">
@@ -317,20 +297,27 @@
     window.addEventListener('touchstart', initAudio);
     window.addEventListener('mousemove', initAudio, { once: true });
 
-    // --- DETEKSI PERANGKAT HP & TOMBOL DESKTOP MODE ---
+    // --- LOGIKA PEMBATASAN MURNI: HANYA HILANG JIKA MODE DESKTOP BROWSER AKTIF ---
     const mobilePrompt = document.getElementById('mobile-prompt');
-    const desktopBtn = document.getElementById('desktopBtn');
 
-    const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || ('ontouchstart' in window);
+    function checkDesktopMode() {
+      // Jika lebar layar di atas 900px atau user agent menandakan bukan mode mobile sempit, prompt akan hilang
+      const isDesktopWidth = window.innerWidth > 900;
+      const isTouchDevice = 'ontouchstart' in window;
 
-    if (!isMobileDevice) {
-      mobilePrompt.style.display = 'none';
+      // Jika perangkat adalah mobile dan layarnya masih menyempit (belum aktif mode desktop browser)
+      if (isTouchDevice && window.innerWidth <= 900) {
+        mobilePrompt.style.display = 'flex';
+      } else {
+        mobilePrompt.style.display = 'none';
+      }
     }
 
-    desktopBtn.addEventListener('click', () => {
-      initAudio();
-      mobilePrompt.classList.add('hidden'); // Langsung menghilangkan prompt mobile dan memunculkan input kode
-    });
+    // Cek saat pertama kali dibuka
+    checkDesktopMode();
+
+    // Cek ulang secara otomatis jika pengguna mengubah setelan browser ke mode desktop
+    window.addEventListener('resize', checkDesktopMode);
 
     // --- CANVAS STARFIELD & LAYERED BLACK HOLE ---
     const canvas = document.getElementById('space-canvas');
