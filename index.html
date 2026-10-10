@@ -183,6 +183,9 @@
   </div>
 
   <script>
+    // ===================================================================
+    // DETEKSI PERANGKAT
+    // ===================================================================
     (function () {
       function checkDesktopLock() {
         const ua = navigator.userAgent || '';
@@ -212,6 +215,7 @@
       window.addEventListener('pageshow', checkDesktopLock);
     })();
 
+    // --- SYSTEM AUDIO ---
     let audioCtx = null;
     let isAudioActive = false;
 
@@ -321,6 +325,7 @@
     window.addEventListener('touchstart', initAudio);
     window.addEventListener('mousemove', initAudio, { once: true });
 
+    // --- CANVAS STARFIELD ---
     const canvas = document.getElementById('space-canvas');
     const ctx = canvas.getContext('2d');
 
@@ -362,85 +367,6 @@
           hasFlare: Math.random() < 0.15
         });
       }
-    }
-
-    let blackHoleActive = false;
-    let blackHoleScale = 0;
-    const bhParticles = [];
-
-    for (let i = 0; i < 200; i++) {
-      bhParticles.push({
-        dist: Math.random() * 110 + 40,
-        angle: Math.random() * Math.PI * 2,
-        speed: Math.random() * 0.02 + 0.01,
-        size: Math.random() * 2 + 0.5,
-        alpha: Math.random() * 0.7 + 0.3
-      });
-    }
-
-    function renderLayeredBlackHole(cx, cy, scale) {
-      ctx.save();
-      ctx.translate(cx, cy);
-
-      const haloGrad = ctx.createRadialGradient(0, 0, 30 * scale, 0, 0, 180 * scale);
-      haloGrad.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
-      haloGrad.addColorStop(0.2, 'rgba(180, 200, 255, 0.4)');
-      haloGrad.addColorStop(0.5, 'rgba(120, 80, 255, 0.15)');
-      haloGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-
-      ctx.beginPath();
-      ctx.fillStyle = haloGrad;
-      ctx.arc(0, 0, 180 * scale, 0, Math.PI * 2);
-      ctx.fill();
-
-      const backParticles = [];
-      const frontParticles = [];
-
-      for (let i = 0; i < bhParticles.length; i++) {
-        const p = bhParticles[i];
-        p.angle += p.speed;
-        p.dist -= 0.05;
-        if (p.dist < 35) p.dist = Math.random() * 100 + 50;
-
-        const px = Math.cos(p.angle) * p.dist * scale;
-        const py = Math.sin(p.angle) * (p.dist * 0.35) * scale;
-
-        const particleData = { px, py, size: p.size * scale, alpha: p.alpha * scale };
-
-        if (Math.cos(p.angle) > 0) {
-          backParticles.push(particleData);
-        } else {
-          frontParticles.push(particleData);
-        }
-      }
-
-      for (let i = 0; i < backParticles.length; i++) {
-        const pt = backParticles[i];
-        ctx.beginPath();
-        ctx.fillStyle = `rgba(220, 235, 255, ${pt.alpha})`;
-        ctx.arc(pt.px, pt.py, pt.size, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      const coreGrad = ctx.createRadialGradient(0, 0, 25 * scale, 0, 0, 38 * scale);
-      coreGrad.addColorStop(0, '#000000');
-      coreGrad.addColorStop(0.85, '#000000');
-      coreGrad.addColorStop(1, 'rgba(255, 255, 255, 0.9)');
-
-      ctx.beginPath();
-      ctx.fillStyle = coreGrad;
-      ctx.arc(0, 0, 38 * scale, 0, Math.PI * 2);
-      ctx.fill();
-
-      for (let i = 0; i < frontParticles.length; i++) {
-        const pt = frontParticles[i];
-        ctx.beginPath();
-        ctx.fillStyle = `rgba(220, 235, 255, ${pt.alpha})`;
-        ctx.arc(pt.px, pt.py, pt.size, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      ctx.restore();
     }
 
     let isGlitching = false;
@@ -533,13 +459,6 @@
         renderStarfield(ctx);
       }
 
-      if (blackHoleActive) {
-        if (blackHoleScale < 1.5) {
-          blackHoleScale += 0.01;
-        }
-        renderLayeredBlackHole(width / 2, height / 2, blackHoleScale);
-      }
-
       requestAnimationFrame(animate);
     }
 
@@ -571,8 +490,6 @@
           errorEl.classList.remove('visible');
           layer1.style.opacity = '0';
           layer1.style.visibility = 'hidden';
-
-          blackHoleActive = true;
 
           setTimeout(() => {
             layer2.classList.add('active');
