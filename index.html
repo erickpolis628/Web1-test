@@ -31,7 +31,6 @@
       z-index: 1;
     }
 
-    /* KUNCIAN MUTLAK HANYA UNTUK HP (Menutup seluruh layar jika belum mode desktop) */
     #mobile-prompt {
       position: fixed;
       top: 0;
@@ -64,7 +63,6 @@
       line-height: 1.6;
     }
 
-    /* Layer 1 */
     #layer1 {
       position: absolute;
       top: 0;
@@ -124,7 +122,6 @@
       opacity: 1;
     }
 
-    /* Layer 2 */
     #layer2 {
       position: absolute;
       top: 0;
@@ -169,7 +166,6 @@
 
   <canvas id="space-canvas"></canvas>
 
-  <!-- Layar Pengunci Khusus HP -->
   <div id="mobile-prompt">
     <h2 class="mobile-title">Changes to Desktop</h2>
     <p class="mobile-desc">Not everything is visible on your vision</p>
@@ -187,19 +183,9 @@
   </div>
 
   <script>
-    // ===================================================================
-    // DETEKSI PERANGKAT — DIJALANKAN PALING AWAL
-    // Aturan:
-    //   - HP/iPhone  mode normal       → TERKUNCI
-    //   - HP/iPhone  mode Situs Desktop→ LOLOS
-    //   - Laptop / PC / Tablet         → LOLOS
-    // ===================================================================
     (function () {
       function checkDesktopLock() {
         const ua = navigator.userAgent || '';
-
-        // Keyword "Mobile" ada di SEMUA browser HP (Android normal, iPhone)
-        // dan HILANG otomatis saat user aktifkan "Situs Desktop".
         const isMobile =
           /Mobile|iPhone|iPod|Windows Phone|IEMobile|BlackBerry|Opera Mini|Opera Mobi|webOS/i.test(ua);
 
@@ -215,21 +201,17 @@
         }
       }
 
-      // Panggil segera
       checkDesktopLock();
 
-      // Panggil lagi setelah DOM siap (jaga-jaga)
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', checkDesktopLock);
       }
 
-      // Panggil saat resize / rotasi / kembali dari bfcache
       window.addEventListener('resize', () => setTimeout(checkDesktopLock, 100));
       window.addEventListener('orientationchange', checkDesktopLock);
       window.addEventListener('pageshow', checkDesktopLock);
     })();
 
-    // --- SYSTEM AUDIO ---
     let audioCtx = null;
     let isAudioActive = false;
 
@@ -339,7 +321,6 @@
     window.addEventListener('touchstart', initAudio);
     window.addEventListener('mousemove', initAudio, { once: true });
 
-    // --- CANVAS STARFIELD & LAYERED BLACK HOLE ---
     const canvas = document.getElementById('space-canvas');
     const ctx = canvas.getContext('2d');
 
