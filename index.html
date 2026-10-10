@@ -6,214 +6,78 @@
   <title>Portal Phi</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;600&display=swap');
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body, html {
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
+      width: 100%; height: 100%; overflow: hidden;
       background-color: #030308;
       font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
       color: #ffffff;
     }
-
     #space-canvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 1;
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%; z-index: 1;
     }
-
     #mobile-prompt {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      z-index: 999999;
-      background-color: #030308;
-      display: none;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      padding: 30px;
-      text-align: center;
+      position: fixed; top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      z-index: 999999; background-color: #030308;
+      display: none; flex-direction: column;
+      justify-content: center; align-items: center;
+      padding: 30px; text-align: center;
     }
-
     .mobile-title {
-      font-size: 1.8rem;
-      font-weight: 400;
-      letter-spacing: 0.3rem;
-      margin-bottom: 15px;
-      text-shadow: 0 0 15px rgba(255, 255, 255, 0.6);
+      font-size: 1.8rem; font-weight: 400;
+      letter-spacing: 0.3rem; margin-bottom: 15px;
+      text-shadow: 0 0 15px rgba(255,255,255,0.6);
     }
-
     .mobile-desc {
-      font-size: 0.9rem;
-      color: rgba(255, 255, 255, 0.6);
-      letter-spacing: 0.1rem;
-      max-width: 320px;
-      line-height: 1.6;
+      font-size: 0.9rem; color: rgba(255,255,255,0.6);
+      letter-spacing: 0.1rem; max-width: 320px; line-height: 1.6;
     }
-
     #layer1 {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 2;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      transition: opacity 1.2s ease, visibility 1.2s ease;
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%; z-index: 2;
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
+      transition: opacity 1s ease, visibility 1s ease;
     }
-
     .input-wrapper {
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+      position: relative; display: flex;
+      flex-direction: column; align-items: center;
     }
-
     .secret-input {
-      background: transparent;
-      border: none;
-      outline: none;
-      color: rgba(255, 255, 255, 0.9);
+      background: transparent; border: none; outline: none;
+      color: rgba(255,255,255,0.9);
       font-family: 'Space Grotesk', monospace;
-      font-size: 2.2rem;
-      letter-spacing: 0.6rem;
-      text-align: center;
-      padding: 10px 20px;
-      width: 280px;
-      caret-color: #ffffff;
+      font-size: 2.2rem; letter-spacing: 0.6rem;
+      text-align: center; padding: 10px 20px;
+      width: 280px; caret-color: #ffffff;
     }
-
     .secret-input::placeholder {
-      color: rgba(255, 255, 255, 0.35);
+      color: rgba(255,255,255,0.35);
       letter-spacing: 0.5rem;
     }
-
     .error-msg {
-      position: absolute;
-      top: 100%;
-      margin-top: 15px;
-      color: #ff3344;
-      font-size: 0.85rem;
-      letter-spacing: 0.25rem;
-      text-transform: uppercase;
-      opacity: 0;
-      transition: opacity 0.3s ease;
+      position: absolute; top: 100%; margin-top: 15px;
+      color: #ff3344; font-size: 0.85rem;
+      letter-spacing: 0.25rem; text-transform: uppercase;
+      opacity: 0; transition: opacity 0.3s ease;
       pointer-events: none;
-      text-shadow: 0 0 10px rgba(255, 51, 68, 0.8);
+      text-shadow: 0 0 10px rgba(255,51,68,0.8);
       white-space: nowrap;
     }
+    .error-msg.visible { opacity: 1; }
 
-    .error-msg.visible {
-      opacity: 1;
+    /* Fade hitam untuk transisi antar halaman */
+    #page-fader {
+      position: fixed; top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background-color: #030308;
+      z-index: 99998;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.8s ease;
     }
-
-    #layer2 {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 3;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      opacity: 0;
-      visibility: hidden;
-      transition: opacity 2s ease, visibility 2s ease;
-      pointer-events: none;
-    }
-
-    #layer2.active {
-      opacity: 1;
-      visibility: visible;
-      pointer-events: auto;
-    }
-
-    .layer2-text {
-      font-size: 2.4rem;
-      font-weight: 300;
-      letter-spacing: 0.35rem;
-      color: #ffffff;
-      text-align: center;
-      text-shadow: 0 0 20px rgba(255, 255, 255, 0.9), 0 0 40px rgba(200, 220, 255, 0.4);
-      z-index: 10;
-      white-space: nowrap;
-      padding-left: 0.35rem; /* kompensasi letter-spacing di huruf terakhir */
-    }
-
-    /* Kursor ketik */
-    .type-cursor {
-      display: inline-block;
-      width: 3px;
-      height: 1em;
-      background-color: #ffffff;
-      margin-left: 4px;
-      vertical-align: -0.08em;
-      box-shadow: 0 0 10px rgba(255, 255, 255, 0.9), 0 0 20px rgba(200, 220, 255, 0.6);
-      animation: cursorBlink 0.85s ease-in-out infinite;
-      border-radius: 2px;
-    }
-
-    .type-cursor.hidden {
-      display: none;
-    }
-
-    .type-cursor.finished {
-      animation: cursorFadeOut 1.2s ease-out forwards;
-    }
-
-    @keyframes cursorBlink {
-      0%, 45%   { opacity: 1; }
-      50%, 95%  { opacity: 0.15; }
-      100%      { opacity: 1; }
-    }
-
-    @keyframes cursorFadeOut {
-      0%   { opacity: 1; }
-      60%  { opacity: 1; }
-      100% { opacity: 0; }
-    }
-
-    /* Huruf yang baru muncul, sedikit glow pulse */
-    .typed-char {
-      display: inline-block;
-      animation: charAppear 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
-    }
-
-    @keyframes charAppear {
-      0% {
-        opacity: 0;
-        transform: translateY(6px) scale(0.9);
-        filter: blur(6px);
-        text-shadow: 0 0 30px rgba(255, 255, 255, 1);
-      }
-      60% {
-        opacity: 1;
-        transform: translateY(0) scale(1.02);
-        filter: blur(0.4px);
-      }
-      100% {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-        filter: blur(0);
-      }
-    }
+    #page-fader.active { opacity: 1; pointer-events: auto; }
   </style>
 </head>
 <body>
@@ -232,23 +96,16 @@
     </div>
   </div>
 
-  <div id="layer2">
-    <h1 class="layer2-text"><span id="typedTarget"></span><span class="type-cursor hidden" id="typeCursor"></span></h1>
-  </div>
+  <div id="page-fader"></div>
 
   <script>
-    // ===================================================================
-    // DETEKSI PERANGKAT
-    // ===================================================================
+    // --- DETEKSI PERANGKAT ---
     (function () {
       function checkDesktopLock() {
         const ua = navigator.userAgent || '';
-        const isMobile =
-          /Mobile|iPhone|iPod|Windows Phone|IEMobile|BlackBerry|Opera Mini|Opera Mobi|webOS/i.test(ua);
-
+        const isMobile = /Mobile|iPhone|iPod|Windows Phone|IEMobile|BlackBerry|Opera Mini|Opera Mobi|webOS/i.test(ua);
         const prompt = document.getElementById('mobile-prompt');
         if (!prompt) return;
-
         if (isMobile) {
           prompt.style.display = 'flex';
           document.body.style.overflow = 'hidden';
@@ -257,145 +114,76 @@
           document.body.style.overflow = '';
         }
       }
-
       checkDesktopLock();
-
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', checkDesktopLock);
-      }
-
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', checkDesktopLock);
       window.addEventListener('resize', () => setTimeout(checkDesktopLock, 100));
       window.addEventListener('orientationchange', checkDesktopLock);
       window.addEventListener('pageshow', checkDesktopLock);
     })();
 
-    // --- SYSTEM AUDIO ---
-    let audioCtx = null;
-    let isAudioActive = false;
-
+    // --- AUDIO ---
+    let audioCtx = null, isAudioActive = false;
     function initAudio() {
       if (isAudioActive) return;
-
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      audioCtx = new AudioContext();
-
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      }
-
+      const AC = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AC();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
       isAudioActive = true;
       playOriginalSpaceAmbient();
-
       window.removeEventListener('click', initAudio);
       window.removeEventListener('keydown', initAudio);
       window.removeEventListener('touchstart', initAudio);
       window.removeEventListener('mousemove', initAudio);
     }
-
     function playOriginalSpaceAmbient() {
       const now = audioCtx.currentTime;
-
       const bufferSize = audioCtx.sampleRate * 2;
       const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
       const output = noiseBuffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) {
-        output[i] = Math.random() * 2 - 1;
-      }
-
+      for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
       const whiteNoise = audioCtx.createBufferSource();
-      whiteNoise.buffer = noiseBuffer;
-      whiteNoise.loop = true;
-
+      whiteNoise.buffer = noiseBuffer; whiteNoise.loop = true;
       const filter = audioCtx.createBiquadFilter();
       filter.type = 'lowpass';
       filter.frequency.setValueAtTime(140, now);
-
       const lfo = audioCtx.createOscillator();
       lfo.frequency.setValueAtTime(0.05, now);
       const lfoGain = audioCtx.createGain();
       lfoGain.gain.setValueAtTime(80, now);
-
-      lfo.connect(lfoGain);
-      lfoGain.connect(filter.frequency);
-
+      lfo.connect(lfoGain); lfoGain.connect(filter.frequency);
       const masterGain = audioCtx.createGain();
       masterGain.gain.setValueAtTime(0.0001, now);
       masterGain.gain.linearRampToValueAtTime(0.25, now + 3.0);
-
-      whiteNoise.connect(filter);
-      filter.connect(masterGain);
+      whiteNoise.connect(filter); filter.connect(masterGain);
       masterGain.connect(audioCtx.destination);
-
-      whiteNoise.start(now);
-      lfo.start(now);
+      whiteNoise.start(now); lfo.start(now);
     }
-
     function playGlitchSound() {
       if (!audioCtx) return;
       const now = audioCtx.currentTime;
-
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-
+      const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
       osc.type = 'sawtooth';
       osc.frequency.setValueAtTime(110, now);
       osc.frequency.linearRampToValueAtTime(55, now + 0.2);
-
       gain.gain.setValueAtTime(0.0001, now);
       gain.gain.linearRampToValueAtTime(0.15, now + 0.02);
       gain.gain.linearRampToValueAtTime(0.0001, now + 0.2);
-
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-
-      osc.start(now);
-      osc.stop(now + 0.2);
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.start(now); osc.stop(now + 0.2);
     }
-
     function playSuccessSound() {
       if (!audioCtx) return;
       const now = audioCtx.currentTime;
-
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-
+      const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
       osc.type = 'sine';
       osc.frequency.setValueAtTime(180, now);
       osc.frequency.exponentialRampToValueAtTime(520, now + 1.8);
-
       gain.gain.setValueAtTime(0.0001, now);
       gain.gain.linearRampToValueAtTime(0.35, now + 0.5);
       gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.5);
-
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-
-      osc.start(now);
-      osc.stop(now + 2.5);
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.start(now); osc.stop(now + 2.5);
     }
-
-    // Suara "tick" kecil tiap huruf muncul (smooth, lembut)
-    function playTypeTick() {
-      if (!audioCtx) return;
-      const now = audioCtx.currentTime;
-
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(1400 + Math.random() * 400, now);
-
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.linearRampToValueAtTime(0.02, now + 0.005);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
-
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-
-      osc.start(now);
-      osc.stop(now + 0.06);
-    }
-
     window.addEventListener('click', initAudio);
     window.addEventListener('keydown', initAudio);
     window.addEventListener('touchstart', initAudio);
@@ -404,10 +192,8 @@
     // --- CANVAS STARFIELD ---
     const canvas = document.getElementById('space-canvas');
     const ctx = canvas.getContext('2d');
-
     let width = canvas.width = window.innerWidth;
     let height = canvas.height = window.innerHeight;
-
     window.addEventListener('resize', () => {
       width = canvas.width = window.innerWidth;
       height = canvas.height = window.innerHeight;
@@ -420,7 +206,6 @@
 
     const STAR_COUNT = 300;
     let stars = [];
-
     const starColors = [
       { r: 255, g: 255, b: 255 },
       { r: 235, g: 242, b: 255 },
@@ -445,19 +230,14 @@
       }
     }
 
-    let isGlitching = false;
-    let glitchDuration = 0;
+    let isGlitching = false, glitchDuration = 0;
 
     function renderStarfield(targetCtx, offsetX = 0, offsetY = 0, colorOverride = null) {
       for (let i = 0; i < stars.length; i++) {
         const star = stars[i];
         const currentAlpha = Math.max(0.1, star.baseAlpha + Math.sin(star.twinklePhase) * 0.25);
-
-        const x = star.x + offsetX;
-        const y = star.y + offsetY;
-
+        const x = star.x + offsetX, y = star.y + offsetY;
         targetCtx.save();
-
         if (colorOverride) {
           targetCtx.beginPath();
           targetCtx.fillStyle = `rgba(${colorOverride.r}, ${colorOverride.g}, ${colorOverride.b}, ${currentAlpha})`;
@@ -465,166 +245,101 @@
           targetCtx.fill();
         } else {
           const rad = star.radius;
-          const gradient = targetCtx.createRadialGradient(x, y, 0, x, y, rad * 2.5);
-          gradient.addColorStop(0, `rgba(${star.color.r}, ${star.color.g}, ${star.color.b}, ${currentAlpha})`);
-          gradient.addColorStop(0.4, `rgba(${star.color.r}, ${star.color.g}, ${star.color.b}, ${currentAlpha * 0.5})`);
-          gradient.addColorStop(1, `rgba(${star.color.r}, ${star.color.g}, ${star.color.b}, 0)`);
-
+          const g = targetCtx.createRadialGradient(x, y, 0, x, y, rad * 2.5);
+          g.addColorStop(0, `rgba(${star.color.r}, ${star.color.g}, ${star.color.b}, ${currentAlpha})`);
+          g.addColorStop(0.4, `rgba(${star.color.r}, ${star.color.g}, ${star.color.b}, ${currentAlpha * 0.5})`);
+          g.addColorStop(1, `rgba(${star.color.r}, ${star.color.g}, ${star.color.b}, 0)`);
           targetCtx.beginPath();
-          targetCtx.fillStyle = gradient;
+          targetCtx.fillStyle = g;
           targetCtx.arc(x, y, rad * 2.5, 0, Math.PI * 2);
           targetCtx.fill();
-
           if (star.hasFlare && star.radius > 1.5) {
             targetCtx.strokeStyle = `rgba(${star.color.r}, ${star.color.g}, ${star.color.b}, ${currentAlpha * 0.35})`;
             targetCtx.lineWidth = 0.5;
-            const flareLen = star.radius * 4;
-
+            const fl = star.radius * 4;
             targetCtx.beginPath();
-            targetCtx.moveTo(x - flareLen, y);
-            targetCtx.lineTo(x + flareLen, y);
-            targetCtx.moveTo(x, y - flareLen);
-            targetCtx.lineTo(x, y + flareLen);
+            targetCtx.moveTo(x - fl, y); targetCtx.lineTo(x + fl, y);
+            targetCtx.moveTo(x, y - fl); targetCtx.lineTo(x, y + fl);
             targetCtx.stroke();
           }
         }
-
         targetCtx.restore();
       }
     }
 
     function animate() {
       for (let i = 0; i < stars.length; i++) {
-        const star = stars[i];
-        star.x += vx;
-        star.y += vy;
-        star.twinklePhase += star.twinkleSpeed;
-
-        if (star.x < -10) star.x = width + 10;
-        if (star.y < -10) star.y = height + 10;
+        const s = stars[i];
+        s.x += vx; s.y += vy; s.twinklePhase += s.twinkleSpeed;
+        if (s.x < -10) s.x = width + 10;
+        if (s.y < -10) s.y = height + 10;
       }
-
       ctx.clearRect(0, 0, width, height);
-
       if (isGlitching && glitchDuration > 0) {
         glitchDuration--;
-
-        const redOffset = (Math.random() - 0.5) * 18;
-        const blueOffset = (Math.random() - 0.5) * 18;
-
+        const ro = (Math.random() - 0.5) * 18;
+        const bo = (Math.random() - 0.5) * 18;
         ctx.globalCompositeOperation = 'screen';
-
-        renderStarfield(ctx, redOffset, (Math.random() - 0.5) * 4, { r: 255, g: 30, b: 60 });
+        renderStarfield(ctx, ro, (Math.random() - 0.5) * 4, { r: 255, g: 30, b: 60 });
         renderStarfield(ctx, 0, 0, { r: 30, g: 255, b: 120 });
-        renderStarfield(ctx, blueOffset, (Math.random() - 0.5) * 4, { r: 30, g: 120, b: 255 });
-
+        renderStarfield(ctx, bo, (Math.random() - 0.5) * 4, { r: 30, g: 120, b: 255 });
         ctx.globalCompositeOperation = 'source-over';
-
         const sliceCount = Math.floor(Math.random() * 4) + 1;
         for (let i = 0; i < sliceCount; i++) {
-          const sliceY = Math.random() * height;
-          const sliceH = Math.random() * 30 + 5;
-          const sliceX = (Math.random() - 0.5) * 25;
-          ctx.drawImage(canvas, 0, sliceY, width, sliceH, sliceX, sliceY, width, sliceH);
+          const sy = Math.random() * height;
+          const sh = Math.random() * 30 + 5;
+          const sx = (Math.random() - 0.5) * 25;
+          ctx.drawImage(canvas, 0, sy, width, sh, sx, sy, width, sh);
         }
-
-        if (glitchDuration <= 0) {
-          isGlitching = false;
-        }
+        if (glitchDuration <= 0) isGlitching = false;
       } else {
         renderStarfield(ctx);
       }
-
       requestAnimationFrame(animate);
     }
-
     initStars();
     animate();
 
+    // --- INPUT HANDLER ---
     const inputEl = document.getElementById('codeInput');
     const errorEl = document.getElementById('errorMsg');
     const layer1 = document.getElementById('layer1');
-    const layer2 = document.getElementById('layer2');
-
-    // --- ANIMASI KETIK UNTUK LAYER 2 ---
-    const typedTarget = document.getElementById('typedTarget');
-    const typeCursor = document.getElementById('typeCursor');
-    let typingStarted = false;
-
-    function typeText(text) {
-      if (typingStarted) return;
-      typingStarted = true;
-
-      // Tampilkan kursor setelah layer2 mulai fade-in
-      typeCursor.classList.remove('hidden');
-
-      let i = 0;
-
-      function step() {
-        if (i >= text.length) {
-          // Selesai: kursor fade out setelah jeda
-          setTimeout(() => {
-            typeCursor.classList.add('finished');
-          }, 550);
-          return;
-        }
-
-        const ch = text.charAt(i);
-        const span = document.createElement('span');
-        span.className = 'typed-char';
-        span.textContent = ch === ' ' ? '\u00A0' : ch;
-        typedTarget.appendChild(span);
-
-        // Suara tick lembut (hanya untuk huruf, bukan spasi)
-        if (ch !== ' ') playTypeTick();
-
-        i++;
-
-        // Delay natural: huruf biasa ~90-140ms, spasi lebih pendek, jeda setelah koma
-        let delay = 85 + Math.random() * 55;
-        if (ch === ' ') delay = 60 + Math.random() * 30;
-        if (ch === ',' || ch === '.') delay += 180;
-
-        setTimeout(step, delay);
-      }
-
-      // Jeda awal sedikit agar layer2 sudah terlihat
-      setTimeout(step, 450);
-    }
+    const fader = document.getElementById('page-fader');
 
     function triggerGlitch() {
-      isGlitching = true;
-      glitchDuration = 20;
+      isGlitching = true; glitchDuration = 20;
       playGlitchSound();
-      
       errorEl.classList.add('visible');
-      setTimeout(() => {
-        errorEl.classList.remove('visible');
-      }, 1800);
+      setTimeout(() => errorEl.classList.remove('visible'), 1800);
     }
 
     inputEl.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         const value = inputEl.value.trim();
-
         if (value.toLowerCase() === 'phi') {
           playSuccessSound();
           errorEl.classList.remove('visible');
+
+          // Fade layer1 keluar
           layer1.style.opacity = '0';
           layer1.style.visibility = 'hidden';
 
+          // Setelah 400ms, fade hitam masuk, lalu redirect
           setTimeout(() => {
-            layer2.classList.add('active');
-            // Mulai animasi mengetik setelah layer2 muncul
+            fader.classList.add('active');
             setTimeout(() => {
-              typeText('Are You Sure?');
+              window.location.href = 'portal.html';
             }, 700);
-          }, 600);
+          }, 400);
         } else {
           triggerGlitch();
         }
       }
     });
+
+    // Fokuskan input otomatis
+    window.addEventListener('load', () => inputEl.focus());
+    document.addEventListener('click', () => inputEl.focus());
   </script>
 </body>
 </html>
