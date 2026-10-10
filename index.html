@@ -258,21 +258,22 @@
     window.addEventListener('touchstart', initAudio);
     window.addEventListener('mousemove', initAudio, { once: true });
 
-    // --- CANVAS STARFIELD & LAYERED BLACK HOLE (FIXED VIRTUAL RESOLUTION) ---
+    // --- CANVAS STARFIELD & LAYERED BLACK HOLE (OPTIMIZED) ---
     const canvas = document.getElementById('space-canvas');
     const ctx = canvas.getContext('2d');
 
-    // Menetapkan ukuran virtual tetap seperti layar desktop agar ukuran bintang konsisten di semua perangkat
-    let width = 1920;
-    let height = 1080;
+    let width, height;
 
     function resizeCanvas() {
-      const dpr = window.devicePixelRatio || 1;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2); // Batasi DPR maksimal 2 untuk performa HP
+      width = window.innerWidth;
+      height = window.innerHeight;
+
       canvas.width = width * dpr;
       canvas.height = height * dpr;
       
-      canvas.style.width = window.innerWidth + 'px';
-      canvas.style.height = window.innerHeight + 'px';
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
 
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
@@ -285,7 +286,7 @@
     const vx = Math.cos(angleRad) * moveSpeed;
     const vy = Math.sin(angleRad) * moveSpeed;
 
-    const STAR_COUNT = 400;
+    const STAR_COUNT = 220; // Dikurangi sedikit agar mulus di HP
     let stars = [];
 
     const starColors = [
@@ -316,7 +317,7 @@
     let blackHoleScale = 0;
     const bhParticles = [];
 
-    for (let i = 0; i < 200; i++) {
+    for (let i = 0; i < 120; i++) { // Dioptimalkan jumlah partikel blackhole-nya
       bhParticles.push({
         dist: Math.random() * 110 + 40,
         angle: Math.random() * Math.PI * 2,
@@ -411,20 +412,16 @@
           targetCtx.fill();
         } else {
           const rad = star.radius;
-          const gradient = targetCtx.createRadialGradient(x, y, 0, x, y, rad * 2.5);
-          gradient.addColorStop(0, `rgba(${star.color.r}, ${star.color.g}, ${star.color.b}, ${currentAlpha})`);
-          gradient.addColorStop(0.4, `rgba(${star.color.r}, ${star.color.g}, ${star.color.b}, ${currentAlpha * 0.5})`);
-          gradient.addColorStop(1, `rgba(${star.color.r}, ${star.color.g}, ${star.color.b}, 0)`);
-
+          // Menggunakan gambar lingkaran biasa tanpa gradient kompleks jika performa kurang, tapi ini sudah disederhanakan
           targetCtx.beginPath();
-          targetCtx.fillStyle = gradient;
-          targetCtx.arc(x, y, rad * 2.5, 0, Math.PI * 2);
+          targetCtx.fillStyle = `rgba(${star.color.r}, ${star.color.g}, ${star.color.b}, ${currentAlpha})`;
+          targetCtx.arc(x, y, rad, 0, Math.PI * 2);
           targetCtx.fill();
 
           if (star.hasFlare && star.radius > 1.5) {
             targetCtx.strokeStyle = `rgba(${star.color.r}, ${star.color.g}, ${star.color.b}, ${currentAlpha * 0.35})`;
             targetCtx.lineWidth = 0.5;
-            const flareLen = star.radius * 4;
+            const flareLen = star.radius * 3;
 
             targetCtx.beginPath();
             targetCtx.moveTo(x - flareLen, y);
@@ -454,29 +451,7 @@
 
       if (isGlitching && glitchDuration > 0) {
         glitchDuration--;
-
-        const redOffset = (Math.random() - 0.5) * 18;
-        const blueOffset = (Math.random() - 0.5) * 18;
-
-        ctx.globalCompositeOperation = 'screen';
-
-        renderStarfield(ctx, redOffset, (Math.random() - 0.5) * 4, { r: 255, g: 30, b: 60 });
-        renderStarfield(ctx, 0, 0, { r: 30, g: 255, b: 120 });
-        renderStarfield(ctx, blueOffset, (Math.random() - 0.5) * 4, { r: 30, g: 120, b: 255 });
-
-        ctx.globalCompositeOperation = 'source-over';
-
-        const sliceCount = Math.floor(Math.random() * 4) + 1;
-        for (let i = 0; i < sliceCount; i++) {
-          const sliceY = Math.random() * height;
-          const sliceH = Math.random() * 30 + 5;
-          const sliceX = (Math.random() - 0.5) * 25;
-          ctx.drawImage(canvas, 0, sliceY, width, sliceH, sliceX, sliceY, width, sliceH);
-        }
-
-        if (glitchDuration <= 0) {
-          isGlitching = false;
-        }
+        renderStarfield(ctx, (Math.random() - 0.5) * 10, 0, { r: 255, g: 50, b: 50 });
       } else {
         renderStarfield(ctx);
       }
@@ -501,7 +476,7 @@
 
     function triggerGlitch() {
       isGlitching = true;
-      glitchDuration = 20;
+      glitchDuration = 15;
       playGlitchSound();
       
       errorEl.classList.add('visible');
