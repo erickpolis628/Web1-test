@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Portal Phi</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;600&display=swap');
@@ -148,7 +148,7 @@
   </div>
 
   <script>
-    // --- SYSTEM AUDIO ---
+    // --- SYSTEM AUDIO (Versi Pertama yang Diperbaiki Tanpa Crack/Pop) ---
     let audioCtx = null;
     let isAudioActive = false;
 
@@ -258,35 +258,24 @@
     window.addEventListener('touchstart', initAudio);
     window.addEventListener('mousemove', initAudio, { once: true });
 
-    // --- CANVAS STARFIELD & LAYERED BLACK HOLE (OPTIMIZED) ---
+    // --- CANVAS STARFIELD & LAYERED BLACK HOLE ---
     const canvas = document.getElementById('space-canvas');
     const ctx = canvas.getContext('2d');
 
-    let width, height;
+    let width = canvas.width = window.innerWidth;
+    let height = canvas.height = window.innerHeight;
 
-    function resizeCanvas() {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2); // Batasi DPR maksimal 2 untuk performa HP
-      width = window.innerWidth;
-      height = window.innerHeight;
-
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      
-      canvas.style.width = width + 'px';
-      canvas.style.height = height + 'px';
-
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    }
-
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('resize', () => {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    });
 
     const angleRad = (180 + 35) * Math.PI / 180;
     const moveSpeed = 0.12;
     const vx = Math.cos(angleRad) * moveSpeed;
     const vy = Math.sin(angleRad) * moveSpeed;
 
-    const STAR_COUNT = 220; // Dikurangi sedikit agar mulus di HP
+    const STAR_COUNT = 300;
     let stars = [];
 
     const starColors = [
@@ -313,11 +302,12 @@
       }
     }
 
+    // Partikel Accretion Disk (Kiri di atas lubang, Kanan di belakang lubang)
     let blackHoleActive = false;
     let blackHoleScale = 0;
     const bhParticles = [];
 
-    for (let i = 0; i < 120; i++) { // Dioptimalkan jumlah partikel blackhole-nya
+    for (let i = 0; i < 200; i++) {
       bhParticles.push({
         dist: Math.random() * 110 + 40,
         angle: Math.random() * Math.PI * 2,
@@ -331,6 +321,7 @@
       ctx.save();
       ctx.translate(cx, cy);
 
+      // 1. Gravitational Lensing Halo (Pendaran Belakang)
       const haloGrad = ctx.createRadialGradient(0, 0, 30 * scale, 0, 0, 180 * scale);
       haloGrad.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
       haloGrad.addColorStop(0.2, 'rgba(180, 200, 255, 0.4)');
@@ -342,6 +333,7 @@
       ctx.arc(0, 0, 180 * scale, 0, Math.PI * 2);
       ctx.fill();
 
+      // Pisahkan partikel berdasarkan posisi X (Kanan = Belakang, Kiri = Atas/Depan)
       const backParticles = [];
       const frontParticles = [];
 
@@ -356,6 +348,7 @@
 
         const particleData = { px, py, size: p.size * scale, alpha: p.alpha * scale };
 
+        // Sisi Kanan (cos(angle) > 0) berada di belakang lubang, Sisi Kiri (cos(angle) <= 0) berada di atas/depan lubang
         if (Math.cos(p.angle) > 0) {
           backParticles.push(particleData);
         } else {
@@ -363,6 +356,7 @@
         }
       }
 
+      // --- LAYER A: PARTIKEL BELAKANG (Sisi Kanan) ---
       for (let i = 0; i < backParticles.length; i++) {
         const pt = backParticles[i];
         ctx.beginPath();
@@ -371,6 +365,7 @@
         ctx.fill();
       }
 
+      // --- LAYER B: EVENT HORIZON (Bola Hitam) ---
       const coreGrad = ctx.createRadialGradient(0, 0, 25 * scale, 0, 0, 38 * scale);
       coreGrad.addColorStop(0, '#000000');
       coreGrad.addColorStop(0.85, '#000000');
@@ -381,6 +376,7 @@
       ctx.arc(0, 0, 38 * scale, 0, Math.PI * 2);
       ctx.fill();
 
+      // --- LAYER C: PARTIKEL DEPAN/ATAS (Sisi Kiri) ---
       for (let i = 0; i < frontParticles.length; i++) {
         const pt = frontParticles[i];
         ctx.beginPath();
@@ -412,16 +408,20 @@
           targetCtx.fill();
         } else {
           const rad = star.radius;
-          // Menggunakan gambar lingkaran biasa tanpa gradient kompleks jika performa kurang, tapi ini sudah disederhanakan
+          const gradient = targetCtx.createRadialGradient(x, y, 0, x, y, rad * 2.5);
+          gradient.addColorStop(0, `rgba(${star.color.r}, ${star.color.g}, ${star.color.b}, ${currentAlpha})`);
+          gradient.addColorStop(0.4, `rgba(${star.color.r}, ${star.color.g}, ${star.color.b}, ${currentAlpha * 0.5})`);
+          gradient.addColorStop(1, `rgba(${star.color.r}, ${star.color.g}, ${star.color.b}, 0)`);
+
           targetCtx.beginPath();
-          targetCtx.fillStyle = `rgba(${star.color.r}, ${star.color.g}, ${star.color.b}, ${currentAlpha})`;
-          targetCtx.arc(x, y, rad, 0, Math.PI * 2);
+          targetCtx.fillStyle = gradient;
+          targetCtx.arc(x, y, rad * 2.5, 0, Math.PI * 2);
           targetCtx.fill();
 
           if (star.hasFlare && star.radius > 1.5) {
             targetCtx.strokeStyle = `rgba(${star.color.r}, ${star.color.g}, ${star.color.b}, ${currentAlpha * 0.35})`;
             targetCtx.lineWidth = 0.5;
-            const flareLen = star.radius * 3;
+            const flareLen = star.radius * 4;
 
             targetCtx.beginPath();
             targetCtx.moveTo(x - flareLen, y);
@@ -451,7 +451,29 @@
 
       if (isGlitching && glitchDuration > 0) {
         glitchDuration--;
-        renderStarfield(ctx, (Math.random() - 0.5) * 10, 0, { r: 255, g: 50, b: 50 });
+
+        const redOffset = (Math.random() - 0.5) * 18;
+        const blueOffset = (Math.random() - 0.5) * 18;
+
+        ctx.globalCompositeOperation = 'screen';
+
+        renderStarfield(ctx, redOffset, (Math.random() - 0.5) * 4, { r: 255, g: 30, b: 60 });
+        renderStarfield(ctx, 0, 0, { r: 30, g: 255, b: 120 });
+        renderStarfield(ctx, blueOffset, (Math.random() - 0.5) * 4, { r: 30, g: 120, b: 255 });
+
+        ctx.globalCompositeOperation = 'source-over';
+
+        const sliceCount = Math.floor(Math.random() * 4) + 1;
+        for (let i = 0; i < sliceCount; i++) {
+          const sliceY = Math.random() * height;
+          const sliceH = Math.random() * 30 + 5;
+          const sliceX = (Math.random() - 0.5) * 25;
+          ctx.drawImage(canvas, 0, sliceY, width, sliceH, sliceX, sliceY, width, sliceH);
+        }
+
+        if (glitchDuration <= 0) {
+          isGlitching = false;
+        }
       } else {
         renderStarfield(ctx);
       }
@@ -476,7 +498,7 @@
 
     function triggerGlitch() {
       isGlitching = true;
-      glitchDuration = 15;
+      glitchDuration = 20;
       playGlitchSound();
       
       errorEl.classList.add('visible');
