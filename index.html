@@ -31,16 +31,16 @@
       z-index: 1;
     }
 
-    /* Peringatan Permanen untuk HP yang Belum Mode Desktop */
+    /* KUNCIAN MUTLAK MOBILE: Menutup seluruh layar dan tidak bisa ditutup kecuali mode desktop browser aktif */
     #mobile-prompt {
-      position: absolute;
+      position: fixed;
       top: 0;
       left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 100;
+      width: 100vw;
+      height: 100vh;
+      z-index: 999999;
       background-color: #030308;
-      display: flex;
+      display: none;
       flex-direction: column;
       justify-content: center;
       align-items: center;
@@ -169,10 +169,10 @@
 
   <canvas id="space-canvas"></canvas>
 
-  <!-- Peringatan Permanen untuk Perangkat Mobile (Akan otomatis hilang jika browser diubah ke Desktop Mode) -->
+  <!-- Layar Pembatas Mutlak untuk HP -->
   <div id="mobile-prompt">
     <h2 class="mobile-title">Changes to Desktop</h2>
-    <p class="mobile-desc">Silakan aktifkan opsi "Situs Desktop" / "Desktop site" pada menu titik tiga browser Anda untuk mengakses portal ini.</p>
+    <p class="mobile-desc">Situs ini terkunci. Silakan aktifkan opsi "Situs Desktop" pada menu browser Anda untuk melanjutkan.</p>
   </div>
 
   <div id="layer1">
@@ -297,27 +297,23 @@
     window.addEventListener('touchstart', initAudio);
     window.addEventListener('mousemove', initAudio, { once: true });
 
-    // --- LOGIKA PEMBATASAN MURNI: HANYA HILANG JIKA MODE DESKTOP BROWSER AKTIF ---
+    // --- DETEKSI KETAT: KUNCI LAYAR HP JIKA BELUM MODE DESKTOP ---
     const mobilePrompt = document.getElementById('mobile-prompt');
 
-    function checkDesktopMode() {
-      // Jika lebar layar di atas 900px atau user agent menandakan bukan mode mobile sempit, prompt akan hilang
-      const isDesktopWidth = window.innerWidth > 900;
-      const isTouchDevice = 'ontouchstart' in window;
+    function enforceDesktopMode() {
+      // Deteksi berdasarkan keberadaan fitur sentuh DAN lebar layar yang masih kecil (khas tampilan mobile standar)
+      const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+      const isNarrowScreen = window.innerWidth < 1024;
 
-      // Jika perangkat adalah mobile dan layarnya masih menyempit (belum aktif mode desktop browser)
-      if (isTouchDevice && window.innerWidth <= 900) {
+      if (isTouchDevice && isNarrowScreen) {
         mobilePrompt.style.display = 'flex';
       } else {
         mobilePrompt.style.display = 'none';
       }
     }
 
-    // Cek saat pertama kali dibuka
-    checkDesktopMode();
-
-    // Cek ulang secara otomatis jika pengguna mengubah setelan browser ke mode desktop
-    window.addEventListener('resize', checkDesktopMode);
+    enforceDesktopMode();
+    window.addEventListener('resize', enforceDesktopMode);
 
     // --- CANVAS STARFIELD & LAYERED BLACK HOLE ---
     const canvas = document.getElementById('space-canvas');
@@ -473,7 +469,7 @@
           targetCtx.fill();
 
           if (star.hasFlare && star.radius > 1.5) {
-            targetCtx.strokeStyle = `rgba(${star.color.r}, ${star.color.g}, ${star.color.b}, ${currentAlpha * 0.35})`;
+            targetCtx.strokeStyle = `rgba(${star.color.r}, ${star.color.b}, ${currentAlpha * 0.35})`;
             targetCtx.lineWidth = 0.5;
             const flareLen = star.radius * 4;
 
