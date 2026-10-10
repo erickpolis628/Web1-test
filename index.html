@@ -187,6 +187,48 @@
   </div>
 
   <script>
+    // ===================================================================
+    // DETEKSI PERANGKAT — DIJALANKAN PALING AWAL
+    // Aturan:
+    //   - HP/iPhone  mode normal       → TERKUNCI
+    //   - HP/iPhone  mode Situs Desktop→ LOLOS
+    //   - Laptop / PC / Tablet         → LOLOS
+    // ===================================================================
+    (function () {
+      function checkDesktopLock() {
+        const ua = navigator.userAgent || '';
+
+        // Keyword "Mobile" ada di SEMUA browser HP (Android normal, iPhone)
+        // dan HILANG otomatis saat user aktifkan "Situs Desktop".
+        const isMobile =
+          /Mobile|iPhone|iPod|Windows Phone|IEMobile|BlackBerry|Opera Mini|Opera Mobi|webOS/i.test(ua);
+
+        const prompt = document.getElementById('mobile-prompt');
+        if (!prompt) return;
+
+        if (isMobile) {
+          prompt.style.display = 'flex';
+          document.body.style.overflow = 'hidden';
+        } else {
+          prompt.style.display = 'none';
+          document.body.style.overflow = '';
+        }
+      }
+
+      // Panggil segera
+      checkDesktopLock();
+
+      // Panggil lagi setelah DOM siap (jaga-jaga)
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', checkDesktopLock);
+      }
+
+      // Panggil saat resize / rotasi / kembali dari bfcache
+      window.addEventListener('resize', () => setTimeout(checkDesktopLock, 100));
+      window.addEventListener('orientationchange', checkDesktopLock);
+      window.addEventListener('pageshow', checkDesktopLock);
+    })();
+
     // --- SYSTEM AUDIO ---
     let audioCtx = null;
     let isAudioActive = false;
@@ -296,37 +338,6 @@
     window.addEventListener('keydown', initAudio);
     window.addEventListener('touchstart', initAudio);
     window.addEventListener('mousemove', initAudio, { once: true });
-
-    // --- DETEKSI AKURAT: KOMPUTER LOLOS, HP TERKUNCI KECUALI MODE DESKTOP AKTIF ---
-    const mobilePrompt = document.getElementById('mobile-prompt');
-
-    function checkDesktopLock() {
-      const ua = navigator.userAgent || '';
-
-      // Regex kunci: hanya match UA mobile yang BELUM di-desktop-kan.
-      // Saat user aktifkan "Situs Desktop", UA berubah jadi desktop
-      // (Macintosh / X11 Linux) sehingga regex TIDAK match → otomatis lolos.
-      const isMobileUA =
-        /Android.*Mobile|iPhone|iPod|Windows Phone|IEMobile|BlackBerry|Opera Mini|Opera Mobi|webOS/i.test(ua);
-
-      // Fallback untuk kasus UA minimal (HP jadul / webview aneh)
-      const hasTouch = (navigator.maxTouchPoints > 0) || ('ontouchstart' in window);
-      const isNarrowMobile =
-        hasTouch && window.innerWidth < 768 && /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
-
-      if (isMobileUA || isNarrowMobile) {
-        mobilePrompt.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-      } else {
-        mobilePrompt.style.display = 'none';
-        document.body.style.overflow = '';
-      }
-    }
-
-    checkDesktopLock();
-    window.addEventListener('resize', checkDesktopLock);
-    window.addEventListener('orientationchange', checkDesktopLock);
-    window.addEventListener('pageshow', checkDesktopLock);
 
     // --- CANVAS STARFIELD & LAYERED BLACK HOLE ---
     const canvas = document.getElementById('space-canvas');
