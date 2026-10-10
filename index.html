@@ -148,7 +148,7 @@
   </div>
 
   <script>
-    // --- SYSTEM AUDIO (Versi Pertama yang Diperbaiki Tanpa Crack/Pop) ---
+    // --- SYSTEM AUDIO ---
     let audioCtx = null;
     let isAudioActive = false;
 
@@ -258,24 +258,23 @@
     window.addEventListener('touchstart', initAudio);
     window.addEventListener('mousemove', initAudio, { once: true });
 
-    // --- CANVAS STARFIELD & LAYERED BLACK HOLE ---
+    // --- CANVAS STARFIELD & LAYERED BLACK HOLE (FIXED VIRTUAL RESOLUTION) ---
     const canvas = document.getElementById('space-canvas');
     const ctx = canvas.getContext('2d');
 
-    let width, height;
+    // Menetapkan ukuran virtual tetap seperti layar desktop agar ukuran bintang konsisten di semua perangkat
+    let width = 1920;
+    let height = 1080;
 
     function resizeCanvas() {
       const dpr = window.devicePixelRatio || 1;
-      width = window.innerWidth;
-      height = window.innerHeight;
-
       canvas.width = width * dpr;
       canvas.height = height * dpr;
       
-      canvas.style.width = width + 'px';
-      canvas.style.height = height + 'px';
+      canvas.style.width = window.innerWidth + 'px';
+      canvas.style.height = window.innerHeight + 'px';
 
-      ctx.scale(dpr, dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
     resizeCanvas();
@@ -286,7 +285,7 @@
     const vx = Math.cos(angleRad) * moveSpeed;
     const vy = Math.sin(angleRad) * moveSpeed;
 
-    const STAR_COUNT = 300;
+    const STAR_COUNT = 400;
     let stars = [];
 
     const starColors = [
