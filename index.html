@@ -146,19 +146,73 @@
     }
 
     .layer2-text {
-      font-size: 2.2rem;
+      font-size: 2.4rem;
       font-weight: 300;
-      letter-spacing: 0.6rem;
+      letter-spacing: 0.35rem;
       color: #ffffff;
       text-align: center;
       text-shadow: 0 0 20px rgba(255, 255, 255, 0.9), 0 0 40px rgba(200, 220, 255, 0.4);
-      animation: softPulse 4s ease-in-out infinite alternate;
       z-index: 10;
+      white-space: nowrap;
+      padding-left: 0.35rem; /* kompensasi letter-spacing di huruf terakhir */
     }
 
-    @keyframes softPulse {
-      0% { opacity: 0.8; transform: scale(0.98); }
-      100% { opacity: 1; transform: scale(1.02); }
+    /* Kursor ketik */
+    .type-cursor {
+      display: inline-block;
+      width: 3px;
+      height: 1em;
+      background-color: #ffffff;
+      margin-left: 4px;
+      vertical-align: -0.08em;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.9), 0 0 20px rgba(200, 220, 255, 0.6);
+      animation: cursorBlink 0.85s ease-in-out infinite;
+      border-radius: 2px;
+    }
+
+    .type-cursor.hidden {
+      display: none;
+    }
+
+    .type-cursor.finished {
+      animation: cursorFadeOut 1.2s ease-out forwards;
+    }
+
+    @keyframes cursorBlink {
+      0%, 45%   { opacity: 1; }
+      50%, 95%  { opacity: 0.15; }
+      100%      { opacity: 1; }
+    }
+
+    @keyframes cursorFadeOut {
+      0%   { opacity: 1; }
+      60%  { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    /* Huruf yang baru muncul, sedikit glow pulse */
+    .typed-char {
+      display: inline-block;
+      animation: charAppear 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    @keyframes charAppear {
+      0% {
+        opacity: 0;
+        transform: translateY(6px) scale(0.9);
+        filter: blur(6px);
+        text-shadow: 0 0 30px rgba(255, 255, 255, 1);
+      }
+      60% {
+        opacity: 1;
+        transform: translateY(0) scale(1.02);
+        filter: blur(0.4px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        filter: blur(0);
+      }
     }
   </style>
 </head>
@@ -179,7 +233,7 @@
   </div>
 
   <div id="layer2">
-    <h1 class="layer2-text">Are You Ready?</h1>
+    <h1 class="layer2-text"><span id="typedTarget"></span><span class="type-cursor hidden" id="typeCursor"></span></h1>
   </div>
 
   <script>
@@ -318,6 +372,28 @@
 
       osc.start(now);
       osc.stop(now + 2.5);
+    }
+
+    // Suara "tick" kecil tiap huruf muncul (smooth, lembut)
+    function playTypeTick() {
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1400 + Math.random() * 400, now);
+
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.linearRampToValueAtTime(0.02, now + 0.005);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.06);
     }
 
     window.addEventListener('click', initAudio);
@@ -470,6 +546,52 @@
     const layer1 = document.getElementById('layer1');
     const layer2 = document.getElementById('layer2');
 
+    // --- ANIMASI KETIK UNTUK LAYER 2 ---
+    const typedTarget = document.getElementById('typedTarget');
+    const typeCursor = document.getElementById('typeCursor');
+    let typingStarted = false;
+
+    function typeText(text) {
+      if (typingStarted) return;
+      typingStarted = true;
+
+      // Tampilkan kursor setelah layer2 mulai fade-in
+      typeCursor.classList.remove('hidden');
+
+      let i = 0;
+
+      function step() {
+        if (i >= text.length) {
+          // Selesai: kursor fade out setelah jeda
+          setTimeout(() => {
+            typeCursor.classList.add('finished');
+          }, 550);
+          return;
+        }
+
+        const ch = text.charAt(i);
+        const span = document.createElement('span');
+        span.className = 'typed-char';
+        span.textContent = ch === ' ' ? '\u00A0' : ch;
+        typedTarget.appendChild(span);
+
+        // Suara tick lembut (hanya untuk huruf, bukan spasi)
+        if (ch !== ' ') playTypeTick();
+
+        i++;
+
+        // Delay natural: huruf biasa ~90-140ms, spasi lebih pendek, jeda setelah koma
+        let delay = 85 + Math.random() * 55;
+        if (ch === ' ') delay = 60 + Math.random() * 30;
+        if (ch === ',' || ch === '.') delay += 180;
+
+        setTimeout(step, delay);
+      }
+
+      // Jeda awal sedikit agar layer2 sudah terlihat
+      setTimeout(step, 450);
+    }
+
     function triggerGlitch() {
       isGlitching = true;
       glitchDuration = 20;
@@ -493,6 +615,10 @@
 
           setTimeout(() => {
             layer2.classList.add('active');
+            // Mulai animasi mengetik setelah layer2 muncul
+            setTimeout(() => {
+              typeText('Are You Sure?');
+            }, 700);
           }, 600);
         } else {
           triggerGlitch();
