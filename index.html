@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal Phi - Layer 1</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;600&display=swap');
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #030308;
+      font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #ffffff;
+    }
+
+    #space-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    #layer1 {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      transition: opacity 1.2s ease, visibility 1.2s ease;
+    }
+
+    .input-wrapper {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .secret-input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: rgba(255, 255, 255, 0.9);
+      font-family: 'Space Grotesk', monospace;
+      font-size: 2.2rem;
+      letter-spacing: 0.6rem;
+      text-align: center;
+      padding: 10px 20px;
+      width: 280px;
+      caret-color: #ffffff;
+    }
+
+    .secret-input::placeholder {
+      color: rgba(255, 255, 255, 0.35);
+      letter-spacing: 0.5rem;
+    }
+
+    .error-msg {
+      position: absolute;
+      top: 100%;
+      margin-top: 15px;
+      color: #ff3344;
+      font-size: 0.85rem;
+      letter-spacing: 0.25rem;
+      text-transform: uppercase;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+      text-shadow: 0 0 10px rgba(255, 51, 68, 0.8);
+      white-space: nowrap;
+    }
+
+    .error-msg.visible {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="space-canvas"></canvas>
+
+  <div id="layer1">
+    <div class="input-wrapper">
+      <input type="text" id="codeInput" class="secret-input" placeholder="......" autocomplete="off" spellcheck="false" maxlength="20">
+      <div id="errorMsg" class="error-msg">Access Denied</div>
+    </div>
+  </div>
+
+  <script>
+    // --- SYSTEM AUDIO ---
+    let audioCtx = null;
+    let isAudioActive = false;
+
+    function initAudio() {
+      if (isAudioActive) return;
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AudioContext();
+      if (audioCtx.state === 'suspended') { audioCtx.resume(); }
+      isAudioActive = true;
+      playOriginalSpaceAmbient();
+
+      window.removeEventListener('click', initAudio);
+      window.removeEventListener('keydown', initAudio);
+      window.removeEventListener('touchstart', initAudio);
+      window.removeEventListener('mousemove', initAudio);
+    }
+
+    function playOriginalSpaceAmbient() {
+      const now = audioCtx.currentTime;
+      const bufferSize = audioCtx.sampleRate * 2;
+      const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const output = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) { output[i] = Math.random() * 2 - 1; }
+
+      const whiteNoise = audioCtx.createBufferSource();
+      whiteNoise.buffer = noiseBuffer;
+      whiteNoise.loop = true;
+
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(140, now);
+
+      const lfo = audioCtx.createOscillator();
+      lfo.frequency.setValueAtTime(0.05, now);
+      const lfoGain = audioCtx.createGain();
+      lfoGain.gain.setValueAtTime(80, now);
+      lfo.connect(lfoGain);
+      lfoGain.connect(filter.frequency);
+
+      const masterGain = audioCtx.createGain();
+      masterGain.gain.setValueAtTime(0.0001, now);
+      masterGain.gain.linearRampToValueAtTime(0.25, now + 3.0);
+
+      whiteNoise.connect(filter);
+      filter.connect(masterGain);
+      masterGain.connect(audioCtx.destination);
+
+      whiteNoise.start(now);
+      lfo.start(now);
+    }
+
+    function playGlitchSound() {
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(110, now);
+      osc.frequency.linearRampToValueAtTime(55, now + 0.2);
+
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.linearRampToValueAtTime(0.15, now + 0.02);
+      gain.gain.linearRampToValueAtTime(0.0001, now + 0.2);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.2);
+    }
+
+    function playSuccessSound() {
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(180, now);
+      osc.frequency.exponentialRampToValueAtTime(520, now + 1.8);
+
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.linearRampToValueAtTime(0.35, now + 0.5);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.5);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 2.5);
+    }
+
+    window.addEventListener('click', initAudio);
+    window.addEventListener('keydown', initAudio);
+    window.addEventListener('touchstart', initAudio);
+    window.addEventListener('mousemove', initAudio, { once: true });
+
+    // --- CANVAS STARFIELD & BLACK HOLE ---
+    const canvas = document.getElementById('space-canvas');
+    const ctx = canvas.getContext('2d');
+
+    let width = canvas.width = window.innerWidth;
+    let height = canvas.height = window.innerHeight;
+
+    window.addEventListener('resize', () => {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    });
+
+    const angleRad = (180 + 35) * Math.PI / 180;
+    const moveSpeed = 0.12;
+    const vx = Math.cos(angleRad) * moveSpeed;
+    const vy = Math.sin(angleRad) * moveSpeed;
+
+    const STAR_COUNT = 300;
+    let stars = [];
+    const starColors = [
+      { r: 255, g: 255, b: 255 },
+      { r: 235, g: 242, b: 255 },
+      { r: 255, g: 245, b: 220 },
+      { r: 210, g: 230, b: 255 }
+    ];
+
+    function initStars() {
+      stars = [];
+      for (let i = 0; i < STAR_COUNT; i++) {
+        const color = starColors[Math.floor(Math.random() * starColors.length)];
+        stars.push({
+          x: Math.random() * width,
+          y: Math.random() * height,
+          radius: Math.random() < 0.85 ? Math.random() * 1.2 + 0.3 : Math.random() * 2.2 + 1.2,
+          color: color,
+          baseAlpha: Math.random() * 0.5 + 0.3,
+          twinkleSpeed: Math.random() * 0.015 + 0.005,
+          twinklePhase: Math.random() * Math.PI * 2,
+          hasFlare: Math.random() < 0.15
+        });
+      }
+    }
+
+    let blackHoleActive = false;
+    let blackHoleScale = 0;
+    const bhParticles = [];
+
+    for (let i = 0; i < 200; i++) {
+      bhParticles.push({
+        dist: Math.random() * 110 + 40,
+        angle: Math.random() * Math.PI * 2,
+        speed: Math.random() * 0.02 + 0.01,
+        size: Math.random() * 2 + 0.5,
+        alpha: Math.random() * 0.7 + 0.3
+      });
+    }
+
+    function renderLayeredBlackHole(cx, cy, scale) {
+      ctx.save();
+      ctx.translate(cx, cy);
+
+      const haloGrad = ctx.createRadialGradient(0, 0, 30 * scale, 0, 0, 180 * scale);
+      haloGrad.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+      haloGrad.addColorStop(0.2, 'rgba(180, 200, 255, 0.4)');
+      haloGrad.addColorStop(0.5, 'rgba(120, 80, 255, 0.15)');
+      haloGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+      ctx.beginPath();
+      ctx.fillStyle = haloGrad;
+      ctx.arc(0, 0, 180 * scale, 0, Math.PI * 2);
+      ctx.fill();
+
+      const backParticles = [];
+      const frontParticles = [];
+
+      for (let i = 0; i < bhParticles.length; i++) {
+        const p = bhParticles[i];
+        p.angle += p.speed;
+        p.dist -= 0.05;
+        if (p.dist < 35) p.dist = Math.random() * 100 + 50;
+
+        const px = Math.cos(p.angle) * p.dist * scale;
+        const py = Math.sin(p.angle) * (p.dist * 0.35) * scale;
+        const particleData = { px, py, size: p.size * scale, alpha: p.alpha * scale };
+
+        if (Math.cos(p.angle) > 0) {
+          backParticles.push(particleData);
+        } else {
+          frontParticles.push(particleData);
+        }
+      }
+
+      for (let i = 0; i < backParticles.length; i++) {
+        const pt = backParticles[i];
+        ctx.beginPath();
+        ctx.fillStyle = `rgba(220, 235, 255, ${pt.alpha})`;
+        ctx.arc(pt.px, pt.py, pt.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      const coreGrad = ctx.createRadialGradient(0, 0, 25 * scale, 0, 0, 38 * scale);
+      coreGrad.addColorStop(0, '#000000');
+      coreGrad.addColorStop(0.85, '#000000');
+      coreGrad.addColorStop(1, 'rgba(255, 255, 255, 0.9)');
+
+      ctx.beginPath();
+      ctx.fillStyle = coreGrad;
+      ctx.arc(0, 0, 38 * scale, 0, Math.PI * 2);
+      ctx.fill();
+
+      for (let i = 0; i < frontParticles.length; i++) {
+        const pt = frontParticles[i];
+        ctx.beginPath();
+        ctx.fillStyle = `rgba(220, 235, 255, ${pt.alpha})`;
+        ctx.arc(pt.px, pt.py, pt.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+
+    let isGlitching = false;
+    let glitchDuration = 0;
+
+    function renderStarfield(targetCtx, offsetX = 0, offsetY = 0, colorOverride = null) {
+      for (let i = 0; i < stars.length; i++) {
+        const star = stars[i];
+        const currentAlpha = Math.max(0.1, star.baseAlpha + Math.sin(star.twinklePhase) * 0.25);
+        const x = star.x + offsetX;
+        const y = star.y + offsetY;
+
+        targetCtx.save();
+        if (colorOverride) {
+          targetCtx.beginPath();
+          targetCtx.fillStyle = `rgba(${colorOverride.r}, ${colorOverride.g}, ${colorOverride.b}, ${currentAlpha})`;
+          targetCtx.arc(x, y, star.radius, 0, Math.PI * 2);
+          targetCtx.fill();
+        } else {
+          const rad = star.radius;
+          const gradient = targetCtx.createRadialGradient(x, y, 0, x, y, rad * 2.5);
+          gradient.addColorStop(0, `rgba(${star.color.r}, ${star.color.g}, ${star.color.b}, ${currentAlpha})`);
+          gradient.addColorStop(0.4, `rgba(${star.color.r}, ${star.color.g}, ${star.color.b}, ${currentAlpha * 0.5})`);
+          gradient.addColorStop(1, `rgba(${star.color.r}, ${star.color.g}, ${star.color.b}, 0)`);
+
+          targetCtx.beginPath();
+          targetCtx.fillStyle = gradient;
+          targetCtx.arc(x, y, rad * 2.5, 0, Math.PI * 2);
+          targetCtx.fill();
+        }
+        targetCtx.restore();
+      }
+    }
+
+    function animate() {
+      for (let i = 0; i < stars.length; i++) {
+        const star = stars[i];
+        star.x += vx;
+        star.y += vy;
+        star.twinklePhase += star.twinkleSpeed;
+        if (star.x < -10) star.x = width + 10;
+        if (star.y < -10) star.y = height + 10;
+      }
+
+      ctx.clearRect(0, 0, width, height);
+
+      if (isGlitching && glitchDuration > 0) {
+        glitchDuration--;
+        renderStarfield(ctx, (Math.random() - 0.5) * 18, 0, { r: 255, g: 30, b: 60 });
+        if (glitchDuration <= 0) isGlitching = false;
+      } else {
+        renderStarfield(ctx);
+      }
+
+      if (blackHoleActive) {
+        if (blackHoleScale < 1.5) blackHoleScale += 0.01;
+        renderLayeredBlackHole(width / 2, height / 2, blackHoleScale);
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    initStars();
+    animate();
+
+    const inputEl = document.getElementById('codeInput');
+    const errorEl = document.getElementById('errorMsg');
+    const layer1 = document.getElementById('layer1');
+
+    function triggerGlitch() {
+      isGlitching = true;
+      glitchDuration = 20;
+      playGlitchSound();
+      errorEl.classList.add('visible');
+      setTimeout(() => { errorEl.classList.remove('visible'); }, 1800);
+    }
+
+    inputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const value = inputEl.value.trim();
+        if (value.toLowerCase() === 'phi') {
+          playSuccessSound();
+          errorEl.classList.remove('visible');
+          layer1.style.opacity = '0';
+          layer1.style.visibility = 'hidden';
+          blackHoleActive = true;
+
+          // PINDAH KE LAYER 2 SETELAH ANIMASI BLACK HOLE MULAI
+          setTimeout(() => {
+            window.location.href = 'layer2.html';
+          }, 1200);
+        } else {
+          triggerGlitch();
+        }
+      }
+    });
+  </script>
+</body>
+</html>
