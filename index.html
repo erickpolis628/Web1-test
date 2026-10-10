@@ -31,6 +31,58 @@
       z-index: 1;
     }
 
+    /* Prompt Khusus Mobile: Changes to Desktop */
+    #mobile-prompt {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
+      background-color: #030308;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      text-align: center;
+      transition: opacity 0.8s ease, visibility 0.8s ease;
+    }
+
+    #mobile-prompt.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .mobile-title {
+      font-size: 1.8rem;
+      font-weight: 400;
+      letter-spacing: 0.3rem;
+      margin-bottom: 25px;
+      text-shadow: 0 0 15px rgba(255, 255, 255, 0.6);
+    }
+
+    .desktop-btn {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      color: #ffffff;
+      padding: 12px 30px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.95rem;
+      letter-spacing: 0.2rem;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 0 15px rgba(255, 255, 255, 0.05);
+    }
+
+    .desktop-btn:hover {
+      border-color: #ffffff;
+      background: rgba(255, 255, 255, 0.1);
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+    }
+
     /* Layer 1 */
     #layer1 {
       position: absolute;
@@ -135,6 +187,12 @@
 <body>
 
   <canvas id="space-canvas"></canvas>
+
+  <!-- Prompt khusus untuk pengguna HP -->
+  <div id="mobile-prompt">
+    <h2 class="mobile-title">Changes to Desktop</h2>
+    <button id="desktopBtn" class="desktop-btn">Desktop Mode</button>
+  </div>
 
   <div id="layer1">
     <div class="input-wrapper">
@@ -257,6 +315,26 @@
     window.addEventListener('keydown', initAudio);
     window.addEventListener('touchstart', initAudio);
     window.addEventListener('mousemove', initAudio, { once: true });
+
+    // --- LOGIKA TOMBOL DESKTOP MODE UNTUK HP ---
+    const mobilePrompt = document.getElementById('mobile-prompt');
+    const desktopBtn = document.getElementById('desktopBtn');
+
+    // Cek apakah perangkat mobile (berdasarkan lebar layar atau user agent)
+    const isMobile = window.innerWidth <= 768 || /Mobi|Android/i.test(navigator.userAgent);
+
+    if (!isMobile) {
+      // Jika bukan HP, langsung sembunyikan prompt mobile
+      mobilePrompt.style.display = 'none';
+    }
+
+    desktopBtn.addEventListener('click', () => {
+      initAudio(); // Memastikan audio aktif saat tombol diklik
+      mobilePrompt.classList.add('hidden');
+      setTimeout(() => {
+        mobilePrompt.style.display = 'none';
+      }, 800);
+    });
 
     // --- CANVAS STARFIELD & LAYERED BLACK HOLE ---
     const canvas = document.getElementById('space-canvas');
@@ -450,7 +528,6 @@
 
         ctx.globalCompositeOperation = 'screen';
 
-        // Hanya bagian bintang pada canvas yang diglitchnya (RGB: Merah, Hijau, Biru)
         renderStarfield(ctx, redOffset, (Math.random() - 0.5) * 4, { r: 255, g: 30, b: 60 });
         renderStarfield(ctx, 0, 0, { r: 30, g: 255, b: 120 });
         renderStarfield(ctx, blueOffset, (Math.random() - 0.5) * 4, { r: 30, g: 120, b: 255 });
