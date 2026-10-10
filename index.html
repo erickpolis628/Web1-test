@@ -31,7 +31,7 @@
       z-index: 1;
     }
 
-    /* Peringatan Khusus HP/Android (Hanya muncul jika benar-benar di HP dan belum mode desktop browser) */
+    /* KUNCIAN MUTLAK HANYA UNTUK HP (Menutup seluruh layar jika belum mode desktop) */
     #mobile-prompt {
       position: fixed;
       top: 0;
@@ -169,7 +169,7 @@
 
   <canvas id="space-canvas"></canvas>
 
-  <!-- Peringatan Khusus Mobile (Hanya aktif jika dibuka di HP standar) -->
+  <!-- Layar Pengunci Khusus HP -->
   <div id="mobile-prompt">
     <h2 class="mobile-title">Changes to Desktop</h2>
     <p class="mobile-desc">Situs ini terkunci untuk perangkat seluler. Silakan aktifkan opsi "Situs Desktop" pada menu browser Anda untuk melanjutkan.</p>
@@ -297,23 +297,23 @@
     window.addEventListener('touchstart', initAudio);
     window.addEventListener('mousemove', initAudio, { once: true });
 
-    // --- DETEKSI AKURAT: HANYA KUNCI HP YANG BELUM MODE DESKTOP ---
+    // --- DETEKSI AKURAT: KOMPUTER LOLOS, HP TERKUNCI KECUALI MODE DESKTOP AKTIF ---
     const mobilePrompt = document.getElementById('mobile-prompt');
 
-    function checkDeviceMode() {
-      // Deteksi mutlak sistem HP (Android / iOS)
-      const isMobileOS = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    function checkDesktopLock() {
+      // Mendeteksi apakah perangkat menggunakan layar sentuh murni khas HP/Tablet
+      const hasTouch = (navigator.maxTouchPoints > 0) || ('ontouchstart' in window);
       
-      // Jika perangkat HP dan ukuran layarnya masih dalam mode mobile sempit (belum aktif mode desktop browser)
-      if (isMobileOS && window.innerWidth < 1024) {
+      // Jika perangkat sentuh DAN lebar layarnya masih mode seluler (belum di-desktop-kan oleh browser)
+      if (hasTouch && window.innerWidth < 992) {
         mobilePrompt.style.display = 'flex';
       } else {
-        mobilePrompt.style.display = 'none'; // Komputer/Laptop atau HP yang sudah mode desktop akan lolos langsung ke input kode
+        mobilePrompt.style.display = 'none'; // Komputer/Laptop atau HP yang SUDAH mengaktifkan mode desktop akan langsung lolos ke input kode
       }
     }
 
-    checkDeviceMode();
-    window.addEventListener('resize', checkDeviceMode);
+    checkDesktopLock();
+    window.addEventListener('resize', checkDesktopLock);
 
     // --- CANVAS STARFIELD & LAYERED BLACK HOLE ---
     const canvas = document.getElementById('space-canvas');
