@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Portal Phi</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;600&display=swap');
@@ -262,13 +262,24 @@
     const canvas = document.getElementById('space-canvas');
     const ctx = canvas.getContext('2d');
 
-    let width = canvas.width = window.innerWidth;
-    let height = canvas.height = window.innerHeight;
+    let width, height;
 
-    window.addEventListener('resize', () => {
-      width = canvas.width = window.innerWidth;
-      height = canvas.height = window.innerHeight;
-    });
+    function resizeCanvas() {
+      const dpr = window.devicePixelRatio || 1;
+      width = window.innerWidth;
+      height = window.innerHeight;
+
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+
+      ctx.scale(dpr, dpr);
+    }
+
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
 
     const angleRad = (180 + 35) * Math.PI / 180;
     const moveSpeed = 0.12;
@@ -302,7 +313,6 @@
       }
     }
 
-    // Partikel Accretion Disk (Kiri di atas lubang, Kanan di belakang lubang)
     let blackHoleActive = false;
     let blackHoleScale = 0;
     const bhParticles = [];
@@ -321,7 +331,6 @@
       ctx.save();
       ctx.translate(cx, cy);
 
-      // 1. Gravitational Lensing Halo (Pendaran Belakang)
       const haloGrad = ctx.createRadialGradient(0, 0, 30 * scale, 0, 0, 180 * scale);
       haloGrad.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
       haloGrad.addColorStop(0.2, 'rgba(180, 200, 255, 0.4)');
@@ -333,7 +342,6 @@
       ctx.arc(0, 0, 180 * scale, 0, Math.PI * 2);
       ctx.fill();
 
-      // Pisahkan partikel berdasarkan posisi X (Kanan = Belakang, Kiri = Atas/Depan)
       const backParticles = [];
       const frontParticles = [];
 
@@ -348,7 +356,6 @@
 
         const particleData = { px, py, size: p.size * scale, alpha: p.alpha * scale };
 
-        // Sisi Kanan (cos(angle) > 0) berada di belakang lubang, Sisi Kiri (cos(angle) <= 0) berada di atas/depan lubang
         if (Math.cos(p.angle) > 0) {
           backParticles.push(particleData);
         } else {
@@ -356,7 +363,6 @@
         }
       }
 
-      // --- LAYER A: PARTIKEL BELAKANG (Sisi Kanan) ---
       for (let i = 0; i < backParticles.length; i++) {
         const pt = backParticles[i];
         ctx.beginPath();
@@ -365,7 +371,6 @@
         ctx.fill();
       }
 
-      // --- LAYER B: EVENT HORIZON (Bola Hitam) ---
       const coreGrad = ctx.createRadialGradient(0, 0, 25 * scale, 0, 0, 38 * scale);
       coreGrad.addColorStop(0, '#000000');
       coreGrad.addColorStop(0.85, '#000000');
@@ -376,7 +381,6 @@
       ctx.arc(0, 0, 38 * scale, 0, Math.PI * 2);
       ctx.fill();
 
-      // --- LAYER C: PARTIKEL DEPAN/ATAS (Sisi Kiri) ---
       for (let i = 0; i < frontParticles.length; i++) {
         const pt = frontParticles[i];
         ctx.beginPath();
