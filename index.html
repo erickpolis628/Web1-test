@@ -301,19 +301,32 @@
     const mobilePrompt = document.getElementById('mobile-prompt');
 
     function checkDesktopLock() {
-      // Mendeteksi apakah perangkat menggunakan layar sentuh murni khas HP/Tablet
+      const ua = navigator.userAgent || '';
+
+      // Regex kunci: hanya match UA mobile yang BELUM di-desktop-kan.
+      // Saat user aktifkan "Situs Desktop", UA berubah jadi desktop
+      // (Macintosh / X11 Linux) sehingga regex TIDAK match → otomatis lolos.
+      const isMobileUA =
+        /Android.*Mobile|iPhone|iPod|Windows Phone|IEMobile|BlackBerry|Opera Mini|Opera Mobi|webOS/i.test(ua);
+
+      // Fallback untuk kasus UA minimal (HP jadul / webview aneh)
       const hasTouch = (navigator.maxTouchPoints > 0) || ('ontouchstart' in window);
-      
-      // Jika perangkat sentuh DAN lebar layarnya masih mode seluler (belum di-desktop-kan oleh browser)
-      if (hasTouch && window.innerWidth < 992) {
+      const isNarrowMobile =
+        hasTouch && window.innerWidth < 768 && /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+
+      if (isMobileUA || isNarrowMobile) {
         mobilePrompt.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
       } else {
-        mobilePrompt.style.display = 'none'; // Komputer/Laptop atau HP yang SUDAH mengaktifkan mode desktop akan langsung lolos ke input kode
+        mobilePrompt.style.display = 'none';
+        document.body.style.overflow = '';
       }
     }
 
     checkDesktopLock();
     window.addEventListener('resize', checkDesktopLock);
+    window.addEventListener('orientationchange', checkDesktopLock);
+    window.addEventListener('pageshow', checkDesktopLock);
 
     // --- CANVAS STARFIELD & LAYERED BLACK HOLE ---
     const canvas = document.getElementById('space-canvas');
