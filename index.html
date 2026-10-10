@@ -316,20 +316,20 @@
     window.addEventListener('touchstart', initAudio);
     window.addEventListener('mousemove', initAudio, { once: true });
 
-    // --- LOGIKA TOMBOL DESKTOP MODE UNTUK HP ---
+    // --- DETEKSI PERANGKAT HP (MENGGUNAKAN USER AGENT & TOUCH) ---
     const mobilePrompt = document.getElementById('mobile-prompt');
     const desktopBtn = document.getElementById('desktopBtn');
 
-    // Cek apakah perangkat mobile (berdasarkan lebar layar atau user agent)
-    const isMobile = window.innerWidth <= 768 || /Mobi|Android/i.test(navigator.userAgent);
+    // Memastikan perangkat seluler terdeteksi secara akurat meskipun mode desktop browser aktif
+    const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || ('ontouchstart' in window);
 
-    if (!isMobile) {
-      // Jika bukan HP, langsung sembunyikan prompt mobile
+    if (!isMobileDevice) {
+      // Jika benar-benar dibuka dari komputer/laptop, langsung sembunyikan prompt
       mobilePrompt.style.display = 'none';
     }
 
     desktopBtn.addEventListener('click', () => {
-      initAudio(); // Memastikan audio aktif saat tombol diklik
+      initAudio(); // Mengaktifkan audio
       mobilePrompt.classList.add('hidden');
       setTimeout(() => {
         mobilePrompt.style.display = 'none';
