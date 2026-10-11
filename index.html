@@ -140,8 +140,6 @@
     }
     .type-cursor.hidden { display: none; }
     .type-cursor.finished { animation: cursorFadeOut 1.5s ease-out forwards; }
-
-    /* Saat siap diklik, cursor sedikit membesar & menyala */
     .type-cursor.ready {
       transform: scale(1.4);
       box-shadow: 0 0 14px rgba(255,255,255,1), 0 0 28px rgba(200,220,255,0.9);
@@ -188,210 +186,228 @@
     <h1 class="screen2-text"><span id="typedTarget"></span><span class="type-cursor hidden" id="typeCursor"></span></h1>
   </div>
 
-  <script>
-    // ===================================================================
-    // ANTI-COPY PROTECTION (super ketat)
-    // ===================================================================
-    (function () {
-      document.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); return false; }, true);
-      document.addEventListener('selectstart', (e) => { e.preventDefault(); return false; }, true);
-      document.addEventListener('mousedown', (e) => { if (e.detail > 1) { e.preventDefault(); return false; } }, true);
-      document.addEventListener('dragstart', (e) => { e.preventDefault(); return false; }, true);
-      document.addEventListener('drop', (e) => { e.preventDefault(); return false; }, true);
-      document.addEventListener('copy', (e) => { e.preventDefault(); if (e.clipboardData) e.clipboardData.setData('text/plain', ''); return false; }, true);
-      document.addEventListener('cut', (e) => { e.preventDefault(); if (e.clipboardData) e.clipboardData.setData('text/plain', ''); return false; }, true);
-      document.addEventListener('paste', (e) => e.preventDefault(), true);
+<script>
+  // ===================================================================
+  // ANTI-COPY
+  // ===================================================================
+  (function () {
+    document.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); return false; }, true);
+    document.addEventListener('selectstart', (e) => { e.preventDefault(); return false; }, true);
+    document.addEventListener('mousedown', (e) => { if (e.detail > 1) { e.preventDefault(); return false; } }, true);
+    document.addEventListener('dragstart', (e) => { e.preventDefault(); return false; }, true);
+    document.addEventListener('drop', (e) => { e.preventDefault(); return false; }, true);
+    document.addEventListener('copy', (e) => { e.preventDefault(); if (e.clipboardData) e.clipboardData.setData('text/plain', ''); return false; }, true);
+    document.addEventListener('cut', (e) => { e.preventDefault(); if (e.clipboardData) e.clipboardData.setData('text/plain', ''); return false; }, true);
+    document.addEventListener('paste', (e) => e.preventDefault(), true);
+    document.addEventListener('keydown', (e) => {
+      const k = (e.key || '').toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && ['c','a','x','u','s','p'].includes(k)) { e.preventDefault(); e.stopPropagation(); return false; }
+      if (e.key === 'F12') { e.preventDefault(); return false; }
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && ['i','j','c'].includes(k)) { e.preventDefault(); return false; }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'U') { e.preventDefault(); return false; }
+    }, true);
+    setInterval(() => {
+      const sel = window.getSelection && window.getSelection();
+      if (sel && sel.rangeCount > 0 && String(sel).length > 0) sel.removeAllRanges();
+    }, 200);
+  })();
 
-      document.addEventListener('keydown', (e) => {
-        const k = (e.key || '').toLowerCase();
-        if ((e.ctrlKey || e.metaKey) && ['c','a','x','u','s','p'].includes(k)) {
-          e.preventDefault(); e.stopPropagation(); return false;
-        }
-        if (e.key === 'F12') { e.preventDefault(); return false; }
-        if ((e.ctrlKey || e.metaKey) && e.shiftKey && ['i','j','c'].includes(k)) { e.preventDefault(); return false; }
-        if ((e.ctrlKey || e.metaKey) && e.key === 'U') { e.preventDefault(); return false; }
-      }, true);
-
-      setInterval(() => {
-        const sel = window.getSelection && window.getSelection();
-        if (sel && sel.rangeCount > 0 && String(sel).length > 0) sel.removeAllRanges();
-      }, 200);
-    })();
-
-    // ===================================================================
-    // DETEKSI PERANGKAT
-    // ===================================================================
-    (function () {
-      function checkDesktopLock() {
-        const ua = navigator.userAgent || '';
-        const isMobile = /Mobile|iPhone|iPod|Windows Phone|IEMobile|BlackBerry|Opera Mini|Opera Mobi|webOS/i.test(ua);
-        const prompt = document.getElementById('mobile-prompt');
-        if (!prompt) return;
-        if (isMobile) {
-          prompt.style.display = 'flex';
-          document.body.style.overflow = 'hidden';
-        } else {
-          prompt.style.display = 'none';
-          document.body.style.overflow = '';
-        }
-      }
-      checkDesktopLock();
-      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', checkDesktopLock);
-      window.addEventListener('resize', () => setTimeout(checkDesktopLock, 100));
-      window.addEventListener('orientationchange', checkDesktopLock);
-      window.addEventListener('pageshow', checkDesktopLock);
-    })();
-
-    // ===================================================================
-    // AUDIO
-    // ===================================================================
-    let audioCtx = null, isAudioActive = false;
-
-    function initAudio() {
-      if (isAudioActive) return;
-      const AC = window.AudioContext || window.webkitAudioContext;
-      audioCtx = new AC();
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-      isAudioActive = true;
-      playOriginalSpaceAmbient();
-      window.removeEventListener('click', initAudio);
-      window.removeEventListener('keydown', initAudio);
-      window.removeEventListener('touchstart', initAudio);
-      window.removeEventListener('mousemove', initAudio);
+  // ===================================================================
+  // DETEKSI PERANGKAT
+  // ===================================================================
+  (function () {
+    function checkDesktopLock() {
+      const ua = navigator.userAgent || '';
+      const isMobile = /Mobile|iPhone|iPod|Windows Phone|IEMobile|BlackBerry|Opera Mini|Opera Mobi|webOS/i.test(ua);
+      const prompt = document.getElementById('mobile-prompt');
+      if (!prompt) return;
+      if (isMobile) { prompt.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+      else { prompt.style.display = 'none'; document.body.style.overflow = ''; }
     }
+    checkDesktopLock();
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', checkDesktopLock);
+    window.addEventListener('resize', () => setTimeout(checkDesktopLock, 100));
+    window.addEventListener('orientationchange', checkDesktopLock);
+    window.addEventListener('pageshow', checkDesktopLock);
+  })();
 
-    function playOriginalSpaceAmbient() {
-      const now = audioCtx.currentTime;
-      const bufferSize = audioCtx.sampleRate * 2;
-      const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-      const output = noiseBuffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
+  // ===================================================================
+  // AUDIO
+  // ===================================================================
+  let audioCtx = null, isAudioActive = false;
 
-      const whiteNoise = audioCtx.createBufferSource();
-      whiteNoise.buffer = noiseBuffer; whiteNoise.loop = true;
+  function initAudio() {
+    if (isAudioActive) return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AC();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    isAudioActive = true;
+    playOriginalSpaceAmbient();
+    window.removeEventListener('click', initAudio);
+    window.removeEventListener('keydown', initAudio);
+    window.removeEventListener('touchstart', initAudio);
+    window.removeEventListener('mousemove', initAudio);
+  }
 
-      const filter = audioCtx.createBiquadFilter();
-      filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(140, now);
+  function playOriginalSpaceAmbient() {
+    const now = audioCtx.currentTime;
+    const bufferSize = audioCtx.sampleRate * 2;
+    const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
+    const whiteNoise = audioCtx.createBufferSource();
+    whiteNoise.buffer = noiseBuffer; whiteNoise.loop = true;
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(140, now);
+    const lfo = audioCtx.createOscillator();
+    lfo.frequency.setValueAtTime(0.05, now);
+    const lfoGain = audioCtx.createGain();
+    lfoGain.gain.setValueAtTime(80, now);
+    lfo.connect(lfoGain); lfoGain.connect(filter.frequency);
+    const masterGain = audioCtx.createGain();
+    masterGain.gain.setValueAtTime(0.0001, now);
+    masterGain.gain.linearRampToValueAtTime(0.25, now + 3.0);
+    whiteNoise.connect(filter); filter.connect(masterGain);
+    masterGain.connect(audioCtx.destination);
+    whiteNoise.start(now); lfo.start(now);
+  }
 
-      const lfo = audioCtx.createOscillator();
-      lfo.frequency.setValueAtTime(0.05, now);
-      const lfoGain = audioCtx.createGain();
-      lfoGain.gain.setValueAtTime(80, now);
-      lfo.connect(lfoGain); lfoGain.connect(filter.frequency);
+  function playGlitchSound() {
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(110, now);
+    osc.frequency.linearRampToValueAtTime(55, now + 0.2);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(0.15, now + 0.02);
+    gain.gain.linearRampToValueAtTime(0.0001, now + 0.2);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(now); osc.stop(now + 0.2);
+  }
 
-      const masterGain = audioCtx.createGain();
-      masterGain.gain.setValueAtTime(0.0001, now);
-      masterGain.gain.linearRampToValueAtTime(0.25, now + 3.0);
+  function playSuccessSound() {
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(180, now);
+    osc.frequency.exponentialRampToValueAtTime(520, now + 1.8);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(0.35, now + 0.5);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.5);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(now); osc.stop(now + 2.5);
+  }
 
-      whiteNoise.connect(filter); filter.connect(masterGain);
-      masterGain.connect(audioCtx.destination);
-      whiteNoise.start(now); lfo.start(now);
+  function playTypeTick() {
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1400 + Math.random() * 400, now);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(0.02, now + 0.005);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(now); osc.stop(now + 0.06);
+  }
+
+  function playDeleteTick() {
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(700 + Math.random() * 200, now);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(0.015, now + 0.004);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.04);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(now); osc.stop(now + 0.05);
+  }
+
+  function playEscalatingGlitchSound(level) {
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    const intensity = level / MAX_GLITCH_LEVEL;
+    const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+    osc.type = 'sawtooth';
+    const startFreq = 200 + intensity * 900;
+    const endFreq = 40 + Math.random() * 60;
+    osc.frequency.setValueAtTime(startFreq, now);
+    osc.frequency.linearRampToValueAtTime(endFreq, now + 0.35);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(0.12 + intensity * 0.22, now + 0.02);
+    gain.gain.linearRampToValueAtTime(0.0001, now + 0.3 + intensity * 0.35);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(now); osc.stop(now + 0.35 + intensity * 0.4);
+
+    if (intensity > 0.4) {
+      const osc2 = audioCtx.createOscillator(), gain2 = audioCtx.createGain();
+      osc2.type = 'square';
+      osc2.frequency.setValueAtTime(1800 + Math.random() * 1400, now);
+      gain2.gain.setValueAtTime(0.0001, now);
+      gain2.gain.linearRampToValueAtTime(0.03 + intensity * 0.04, now + 0.01);
+      gain2.gain.linearRampToValueAtTime(0.0001, now + 0.15 + intensity * 0.15);
+      osc2.connect(gain2); gain2.connect(audioCtx.destination);
+      osc2.start(now); osc2.stop(now + 0.2 + intensity * 0.2);
     }
+  }
 
-    function playGlitchSound() {
-      if (!audioCtx) return;
-      const now = audioCtx.currentTime;
-      const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(110, now);
-      osc.frequency.linearRampToValueAtTime(55, now + 0.2);
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.linearRampToValueAtTime(0.15, now + 0.02);
-      gain.gain.linearRampToValueAtTime(0.0001, now + 0.2);
-      osc.connect(gain); gain.connect(audioCtx.destination);
-      osc.start(now); osc.stop(now + 0.2);
+  window.addEventListener('click', initAudio);
+  window.addEventListener('keydown', initAudio);
+  window.addEventListener('touchstart', initAudio);
+  window.addEventListener('mousemove', initAudio, { once: true });
+
+  // ===================================================================
+  // CANVAS STARFIELD
+  // ===================================================================
+  const canvas = document.getElementById('space-canvas');
+  const ctx = canvas.getContext('2d');
+  let width = canvas.width = window.innerWidth;
+  let height = canvas.height = window.innerHeight;
+  window.addEventListener('resize', () => {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
+  });
+
+  const angleRad = (180 + 35) * Math.PI / 180;
+  const moveSpeed = 0.12;
+  const vx = Math.cos(angleRad) * moveSpeed;
+  const vy = Math.sin(angleRad) * moveSpeed;
+
+  const STAR_COUNT = 300;
+  let stars = [];
+  const starColors = [
+    { r: 255, g: 255, b: 255 },
+    { r: 235, g: 242, b: 255 },
+    { r: 255, g: 245, b: 220 },
+    { r: 210, g: 230, b: 255 }
+  ];
+
+  function initStars() {
+    stars = [];
+    for (let i = 0; i < STAR_COUNT; i++) {
+      const color = starColors[Math.floor(Math.random() * starColors.length)];
+      stars.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        radius: Math.random() < 0.85 ? Math.random() * 1.2 + 0.3 : Math.random() * 2.2 + 1.2,
+        color: color,
+        baseAlpha: Math.random() * 0.5 + 0.3,
+        twinkleSpeed: Math.random() * 0.015 + 0.005,
+        twinklePhase: Math.random() * Math.PI * 2,
+        hasFlare: Math.random() < 0.15
+      });
     }
+  }
 
-    function playSuccessSound() {
-      if (!audioCtx) return;
-      const now = audioCtx.currentTime;
-      const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(180, now);
-      osc.frequency.exponentialRampToValueAtTime(520, now + 1.8);
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.linearRampToValueAtTime(0.35, now + 0.5);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.5);
-      osc.connect(gain); gain.connect(audioCtx.destination);
-      osc.start(now); osc.stop(now + 2.5);
-    }
-
-    function playTypeTick() {
-      if (!audioCtx) return;
-      const now = audioCtx.currentTime;
-      const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(1400 + Math.random() * 400, now);
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.linearRampToValueAtTime(0.02, now + 0.005);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
-      osc.connect(gain); gain.connect(audioCtx.destination);
-      osc.start(now); osc.stop(now + 0.06);
-    }
-
-    function playDeleteTick() {
-      if (!audioCtx) return;
-      const now = audioCtx.currentTime;
-      const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(700 + Math.random() * 200, now);
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.linearRampToValueAtTime(0.015, now + 0.004);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.04);
-      osc.connect(gain); gain.connect(audioCtx.destination);
-      osc.start(now); osc.stop(now + 0.05);
-    }
-
-    window.addEventListener('click', initAudio);
-    window.addEventListener('keydown', initAudio);
-    window.addEventListener('touchstart', initAudio);
-    window.addEventListener('mousemove', initAudio, { once: true });
-
-    // ===================================================================
-    // CANVAS STARFIELD
-    // ===================================================================
-    const canvas = document.getElementById('space-canvas');
-    const ctx = canvas.getContext('2d');
-    let width = canvas.width = window.innerWidth;
-    let height = canvas.height = window.innerHeight;
-    window.addEventListener('resize', () => {
-      width = canvas.width = window.innerWidth;
-      height = canvas.height = window.innerHeight;
-    });
-
-    const angleRad = (180 + 35) * Math.PI / 180;
-    const moveSpeed = 0.12;
-    const vx = Math.cos(angleRad) * moveSpeed;
-    const vy = Math.sin(angleRad) * moveSpeed;
-
-    const STAR_COUNT = 300;
-    let stars = [];
-    const starColors = [
-      { r: 255, g: 255, b: 255 },
-      { r: 235, g: 242, b: 255 },
-      { r: 255, g: 245, b: 220 },
-      { r: 210, g: 230, b: 255 }
-    ];
-
-    function initStars() {
-      stars = [];
-      for (let i = 0; i < STAR_COUNT; i++) {
-        const color = starColors[Math.floor(Math.random() * starColors.length)];
-        stars.push({
-          x: Math.random() * width,
-          y: Math.random() * height,
-          radius: Math.random() < 0.85 ? Math.random() * 1.2 + 0.3 : Math.random() * 2.2 + 1.2,
-          color: color,
-          baseAlpha: Math.random() * 0.5 + 0.3,
-          twinkleSpeed: Math.random() * 0.015 + 0.005,
-          twinklePhase: Math.random() * Math.PI * 2,
-          hasFlare: Math.random() < 0.15
-        });
-      }
-    }
-
-    let isGlitching = false, glitchDuration = 0;
+  let isGlitching = false, glitchDuration = 0;
+  let thanksPhase = false;
+  let glitchLevel = 0;
+  const MAX_GLITCH_LEVEL = 8;
+  let blackoutDone = false;
 
     function renderStarfield(targetCtx, offsetX = 0, offsetY = 0, colorOverride = null) {
       for (let i = 0; i < stars.length; i++) {
@@ -428,6 +444,78 @@
       }
     }
 
+    function renderGlitchSmall() {
+      const ro = (Math.random() - 0.5) * 18;
+      const bo = (Math.random() - 0.5) * 18;
+      ctx.globalCompositeOperation = 'screen';
+      renderStarfield(ctx, ro, (Math.random() - 0.5) * 4, { r: 255, g: 30, b: 60 });
+      renderStarfield(ctx, 0, 0, { r: 30, g: 255, b: 120 });
+      renderStarfield(ctx, bo, (Math.random() - 0.5) * 4, { r: 30, g: 120, b: 255 });
+      ctx.globalCompositeOperation = 'source-over';
+      const sliceCount = Math.floor(Math.random() * 4) + 1;
+      for (let i = 0; i < sliceCount; i++) {
+        const sy = Math.random() * height;
+        const sh = Math.random() * 30 + 5;
+        const sx = (Math.random() - 0.5) * 25;
+        ctx.drawImage(canvas, 0, sy, width, sh, sx, sy, width, sh);
+      }
+    }
+
+    function renderGlitchEscalating() {
+      const intensity = glitchLevel / MAX_GLITCH_LEVEL;
+      const rgbAmt = 18 + intensity * 90;
+      const ro = (Math.random() - 0.5) * rgbAmt;
+      const bo = (Math.random() - 0.5) * rgbAmt;
+
+      ctx.globalCompositeOperation = 'screen';
+      renderStarfield(ctx, ro, (Math.random() - 0.5) * (4 + intensity * 20), { r: 255, g: 30, b: 60 });
+      renderStarfield(ctx, 0, 0, { r: 30, g: 255, b: 120 });
+      renderStarfield(ctx, bo, (Math.random() - 0.5) * (4 + intensity * 20), { r: 30, g: 120, b: 255 });
+      ctx.globalCompositeOperation = 'source-over';
+
+      const sliceCount = Math.floor(Math.random() * (4 + intensity * 25)) + 1;
+      for (let i = 0; i < sliceCount; i++) {
+        const sy = Math.random() * height;
+        const sh = Math.random() * (30 + intensity * 120) + 5;
+        const sx = (Math.random() - 0.5) * (25 + intensity * 180);
+        ctx.drawImage(canvas, 0, sy, width, sh, sx, sy, width, sh);
+      }
+
+      if (intensity > 0.3) {
+        ctx.globalAlpha = 0.15 + intensity * 0.25;
+        for (let y = 0; y < height; y += 3) {
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+          ctx.fillRect(0, y, width, 1);
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      if (Math.random() < intensity * 0.45) {
+        ctx.fillStyle = `rgba(0, 0, 0, ${Math.random() * intensity * 0.85})`;
+        ctx.fillRect(0, 0, width, height);
+      }
+
+      if (Math.random() < intensity * 0.6) {
+        const dots = Math.floor(60 * intensity);
+        for (let n = 0; n < dots; n++) {
+          ctx.fillStyle = `rgba(255, 255, 255, ${Math.random() * 0.35})`;
+          ctx.fillRect(Math.random() * width, Math.random() * height, 2, 2);
+        }
+      }
+
+      if (intensity > 0.5 && Math.random() < 0.4) {
+        const blocks = Math.floor(intensity * 6);
+        for (let b = 0; b < blocks; b++) {
+          const bx = Math.random() * width;
+          const by = Math.random() * height;
+          const bw = Math.random() * 200 * intensity;
+          const bh = Math.random() * 40 * intensity;
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
+          ctx.fillRect(bx, by, bw, bh);
+        }
+      }
+    }
+
     function animate() {
       for (let i = 0; i < stars.length; i++) {
         const s = stars[i];
@@ -435,27 +523,29 @@
         if (s.x < -10) s.x = width + 10;
         if (s.y < -10) s.y = height + 10;
       }
+
       ctx.clearRect(0, 0, width, height);
-      if (isGlitching && glitchDuration > 0) {
+
+      if (glitchLevel > 0) {
+        renderGlitchEscalating();
+      } else if (isGlitching && glitchDuration > 0) {
         glitchDuration--;
-        const ro = (Math.random() - 0.5) * 18;
-        const bo = (Math.random() - 0.5) * 18;
-        ctx.globalCompositeOperation = 'screen';
-        renderStarfield(ctx, ro, (Math.random() - 0.5) * 4, { r: 255, g: 30, b: 60 });
-        renderStarfield(ctx, 0, 0, { r: 30, g: 255, b: 120 });
-        renderStarfield(ctx, bo, (Math.random() - 0.5) * 4, { r: 30, g: 120, b: 255 });
-        ctx.globalCompositeOperation = 'source-over';
-        const sliceCount = Math.floor(Math.random() * 4) + 1;
-        for (let i = 0; i < sliceCount; i++) {
-          const sy = Math.random() * height;
-          const sh = Math.random() * 30 + 5;
-          const sx = (Math.random() - 0.5) * 25;
-          ctx.drawImage(canvas, 0, sy, width, sh, sx, sy, width, sh);
-        }
+        renderGlitchSmall();
         if (glitchDuration <= 0) isGlitching = false;
       } else {
         renderStarfield(ctx);
       }
+
+      if (glitchLevel > 0 && !blackoutDone) {
+        const intensity = glitchLevel / MAX_GLITCH_LEVEL;
+        const shake = intensity * 10;
+        screen2.style.transform =
+          `translate(${(Math.random() - 0.5) * shake}px, ${(Math.random() - 0.5) * shake}px)`;
+        if (intensity > 0.5) {
+          screen2.style.opacity = 0.65 + Math.random() * 0.35;
+        }
+      }
+
       requestAnimationFrame(animate);
     }
     initStars();
@@ -497,26 +587,17 @@
     }
 
     // ===================================================================
-    // STATE MACHINE — KETIK / HAPUS BERGANTIAN TIAP KLIK
+    // STATE MACHINE
     // ===================================================================
-    // Urutan (setelah intro "Are You Sure?" auto-ketik):
-    //   klik 1 → hapus intro
-    //   klik 2 → ketik "Do you believe what you see?"
-    //   klik 3 → hapus
-    //   klik 4 → ketik "Do we need secret?"
-    //   klik 5 → hapus
-    //   klik 6 → ketik "Thanks."
-    //   klik 7+ → selesai (tidak ada reaksi)
     const phrases = [
       "Do you believe what you see?",
       "Do we need secret?",
       "Thanks."
     ];
 
-    let phraseIndex = 0;         // index frasa berikutnya yang akan diketik
-    let mode = 'delete';         // aksi berikutnya saat klik: 'delete' | 'type'
-    let state = 'idle';          // 'idle' | 'typing' | 'deleting'
-    let finished = false;
+    let phraseIndex = 0;
+    let mode = 'delete';
+    let state = 'idle';
     let transitioned = false;
 
     function setCursorReady(isReady) {
@@ -524,29 +605,19 @@
       else typeCursor.classList.remove('ready');
     }
 
-    // Ketik teks huruf per huruf
-    function typeText(text, isFinal, onDone) {
+    function typeText(text, onDone) {
       state = 'typing';
       setCursorReady(false);
       typeCursor.classList.remove('hidden');
       typeCursor.classList.remove('finished');
-
       let i = 0;
-
       function step() {
         if (i >= text.length) {
           state = 'idle';
-          if (isFinal) {
-            finished = true;
-            // Kursor memudar sebagai tanda cerita selesai
-            setTimeout(() => typeCursor.classList.add('finished'), 550);
-          } else {
-            setCursorReady(true);
-          }
+          setCursorReady(true);
           onDone && onDone();
           return;
         }
-
         const ch = text.charAt(i);
         const span = document.createElement('span');
         span.className = 'typed-char';
@@ -554,7 +625,6 @@
         typedTarget.appendChild(span);
         if (ch !== ' ') playTypeTick();
         i++;
-
         let delay = 85 + Math.random() * 55;
         if (ch === ' ') delay = 60 + Math.random() * 30;
         if (ch === ',' || ch === '.') delay += 180;
@@ -563,70 +633,91 @@
       setTimeout(step, 300);
     }
 
-    // Hapus teks huruf per huruf dari belakang
     function deleteText(onDone) {
       state = 'deleting';
       setCursorReady(false);
-
       function step() {
         const last = typedTarget.lastElementChild;
-        if (!last) {
-          state = 'idle';
-          onDone && onDone();
-          return;
-        }
+        if (!last) { state = 'idle'; onDone && onDone(); return; }
         last.style.transition = 'opacity 0.12s ease, transform 0.12s ease, filter 0.12s ease';
         last.style.opacity = '0';
         last.style.transform = 'translateY(-8px) scale(0.7)';
         last.style.filter = 'blur(3px)';
         setTimeout(() => { if (last.parentNode) last.remove(); }, 130);
-
         playDeleteTick();
         setTimeout(step, 55);
       }
       step();
     }
 
+    function escalateGlitch() {
+      if (blackoutDone) return;
+      glitchLevel = Math.min(glitchLevel + 1, MAX_GLITCH_LEVEL);
+      playEscalatingGlitchSound(glitchLevel);
+      if (glitchLevel >= MAX_GLITCH_LEVEL) {
+        setTimeout(triggerFullBlackout, 900);
+      }
+    }
+
+    function triggerFullBlackout() {
+      if (blackoutDone) return;
+      blackoutDone = true;
+      typeCursor.classList.add('hidden');
+
+      const blackout = document.createElement('div');
+      blackout.style.cssText = `
+        position: fixed; inset: 0;
+        background: #000000;
+        z-index: 9999999;
+        opacity: 0;
+        transition: opacity 2.2s cubic-bezier(0.6, 0, 0.9, 0.3);
+        pointer-events: auto;
+        cursor: default;
+      `;
+      document.body.appendChild(blackout);
+      requestAnimationFrame(() => { blackout.style.opacity = '1'; });
+
+      if (audioCtx && audioCtx.state === 'running') {
+        setTimeout(() => { try { audioCtx.close(); } catch (e) {} }, 2200);
+      }
+    }
+
     // ===================================================================
-    // KLIK DI SCREEN2 → SATU AKSI (KETIK ATAU HAPUS)
+    // KLIK DI SCREEN2
     // ===================================================================
     screen2.addEventListener('click', () => {
-      if (finished) return;
+      if (thanksPhase) {
+        escalateGlitch();
+        return;
+      }
+
       if (state !== 'idle') return;
+      if (phraseIndex > phrases.length) return;
 
       if (mode === 'delete') {
-        // Aksi: hapus teks saat ini
         deleteText(() => {
-          // Siap untuk aksi berikutnya = ketik
           mode = 'type';
-          // Kalau sudah tidak ada frasa tersisa, tandai selesai
-          if (phraseIndex >= phrases.length) {
-            finished = true;
-            setCursorReady(false);
-            setTimeout(() => typeCursor.classList.add('finished'), 300);
-          } else {
-            setCursorReady(true);
-          }
+          setCursorReady(true);
         });
       } else {
-        // Aksi: ketik frasa berikutnya
-        if (phraseIndex >= phrases.length) {
-          finished = true;
-          return;
-        }
+        if (phraseIndex >= phrases.length) return;
         const nextText = phrases[phraseIndex];
         const isLast = (phraseIndex === phrases.length - 1);
         phraseIndex++;
 
-        typeText(nextText, isLast, () => {
-          // Setelah selesai mengetik, aksi berikutnya = hapus
-          mode = 'delete';
+        typeText(nextText, () => {
+          if (isLast) {
+            thanksPhase = true;
+            setCursorReady(true);
+          } else {
+            mode = 'delete';
+          }
         });
       }
     });
 
     // ===================================================================
-    // ENTER → TRANSISI KE SCREEN2
+    // ENTER → MULAI
     // ===================================================================
     inputEl.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !transitioned) {
@@ -636,15 +727,10 @@
           playSuccessSound();
           errorEl.classList.remove('visible');
           inputEl.blur();
-
           screen1.classList.add('hidden');
           screen2.classList.add('active');
-
           setTimeout(() => {
-            typeText('Are You Sure?', false, () => {
-              // Setelah intro selesai, mode siap hapus
-              mode = 'delete';
-            });
+            typeText('Are You Sure?', () => { mode = 'delete'; });
           }, 900);
         } else {
           triggerGlitch();
