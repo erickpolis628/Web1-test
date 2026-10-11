@@ -1,0 +1,1428 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal Phi</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;600&display=swap');
+    *, *::before, *::after {
+      -webkit-user-select: none !important; -moz-user-select: none !important;
+      -ms-user-select: none !important; user-select: none !important;
+      -webkit-touch-callout: none !important; -webkit-user-drag: none !important;
+      -khtml-user-select: none !important; box-sizing: border-box; margin: 0; padding: 0;
+    }
+    html, body {
+      width: 100%; height: 100%; overflow: hidden;
+      background-color: #030308;
+      font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #ffffff; -webkit-tap-highlight-color: transparent;
+    }
+
+    #space-canvas {
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%; z-index: 1;
+    }
+
+    #mobile-prompt {
+      position: fixed; top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      z-index: 999999; background-color: #030308;
+      display: none; flex-direction: column;
+      justify-content: center; align-items: center;
+      padding: 30px; text-align: center;
+    }
+    .mobile-title {
+      font-size: 1.8rem; font-weight: 400;
+      letter-spacing: 0.3rem; margin-bottom: 15px;
+      text-shadow: 0 0 15px rgba(255,255,255,0.6);
+    }
+    .mobile-desc {
+      font-size: 0.9rem; color: rgba(255,255,255,0.6);
+      letter-spacing: 0.1rem; max-width: 320px; line-height: 1.6;
+    }
+
+    /* ============ TOMBOL "?" ============ */
+    .hint-btn {
+      position: fixed; top: 26px; right: 26px;
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.35);
+      background: transparent; color: rgba(255,255,255,0.85);
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.25rem; font-weight: 400;
+      cursor: pointer; z-index: 100;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      text-shadow: 0 0 10px rgba(255,255,255,0.4);
+      outline: none;
+      opacity: 0;
+      animation: fadeInHintBtn 1.4s 0.6s ease forwards;
+    }
+    @keyframes fadeInHintBtn { to { opacity: 1; } }
+    .hint-btn:hover {
+      border-color: rgba(255,255,255,0.9); color: #fff;
+      box-shadow: 0 0 20px rgba(255,255,255,0.35), 0 0 45px rgba(150,200,255,0.2);
+      transform: scale(1.08);
+    }
+    .hint-btn:active { transform: scale(0.94); }
+    .hint-btn.hidden { opacity: 0; pointer-events: none; transition: opacity 0.6s ease; }
+
+    /* ============ OVERLAY HINT ============ */
+    .hint-overlay {
+      position: fixed; inset: 0; z-index: 90;
+      display: flex; align-items: center; justify-content: center;
+      padding: 40px;
+      background: rgba(3, 3, 8, 0.72);
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      opacity: 0; visibility: hidden; pointer-events: none;
+      transition: opacity 0.9s ease, visibility 0.9s ease;
+    }
+    .hint-overlay.visible { opacity: 1; visibility: visible; pointer-events: auto; }
+    .hint-text {
+      font-size: 1.4rem; font-weight: 300;
+      letter-spacing: 0.15rem; line-height: 1.85;
+      color: rgba(255,255,255,0.95); text-align: center;
+      max-width: 640px;
+      text-shadow: 0 0 20px rgba(255,255,255,0.75), 0 0 45px rgba(200,220,255,0.4);
+      white-space: pre-line;
+      animation: hintPulse 3.2s ease-in-out infinite alternate;
+    }
+    @keyframes hintPulse {
+      0% { opacity: 0.82; transform: scale(0.995); }
+      100% { opacity: 1; transform: scale(1.008); }
+    }
+
+    /* ============ SCREEN 1 ============ */
+    #screen1 {
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%; z-index: 2;
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
+      opacity: 1; pointer-events: auto;
+      transition: opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    #screen1.hidden { opacity: 0; pointer-events: none; }
+    .input-wrapper {
+      position: relative; display: flex;
+      flex-direction: column; align-items: center;
+    }
+    .secret-input {
+      background: transparent; border: none; outline: none;
+      color: transparent; -webkit-text-fill-color: transparent;
+      font-family: 'Space Grotesk', monospace;
+      font-size: 2.2rem; letter-spacing: 0.6rem;
+      text-align: center; padding: 10px 20px;
+      width: 280px;
+      caret-color: transparent !important;
+      -webkit-caret-color: transparent !important;
+    }
+    .display-text {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      font-family: 'Space Grotesk', monospace;
+      font-size: 2.2rem; letter-spacing: 0.6rem;
+      text-align: center;
+      color: rgba(255,255,255,0.9);
+      white-space: nowrap;
+    }
+    .display-text.placeholder {
+      color: rgba(255,255,255,0.35);
+      letter-spacing: 0.5rem;
+    }
+    .error-msg {
+      position: absolute; top: 100%; margin-top: 15px;
+      color: #ff3344; font-size: 0.85rem;
+      letter-spacing: 0.25rem; text-transform: uppercase;
+      opacity: 0; transition: opacity 0.3s ease;
+      pointer-events: none;
+      text-shadow: 0 0 10px rgba(255,51,68,0.8);
+      white-space: nowrap;
+    }
+    .error-msg.visible { opacity: 1; }
+
+    /* ============ SCREEN 2 ============ */
+    #screen2 {
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%; z-index: 3;
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity 1.4s cubic-bezier(0.4, 0, 0.2, 1) 0.25s;
+      cursor: pointer;
+    }
+    #screen2.active { opacity: 1; pointer-events: auto; }
+
+    .screen2-text {
+      position: relative;
+      font-size: 2.4rem; font-weight: 300;
+      letter-spacing: 0.35rem; line-height: 1.5;
+      color: #ffffff; text-align: center;
+      text-shadow:
+        0 0 20px rgba(255,255,255,0.9),
+        0 0 40px rgba(200,220,255,0.4);
+      z-index: 10; white-space: pre-line;
+      max-width: 82vw; min-height: 1em;
+      will-change: transform;
+      transition: font-size 0.45s ease, letter-spacing 0.45s ease;
+    }
+    .screen2-text.equation {
+      font-weight: 400;
+      font-family: 'Space Grotesk', 'Cambria Math', 'STIX Two Math', serif;
+    }
+    .screen2-text .word { display: inline-block; white-space: nowrap; }
+
+    .screen2-text::before, .screen2-text::after {
+      content: attr(data-text);
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%;
+      font: inherit; letter-spacing: inherit;
+      line-height: inherit; white-space: pre-line;
+      text-align: center; padding-left: 0.35rem;
+      pointer-events: none; opacity: 0;
+      will-change: transform, clip-path, opacity;
+    }
+
+    .screen2-text.glitching { animation: tvShake 0.35s infinite steps(3, end); }
+    .screen2-text.glitching #typedTarget {
+      text-shadow:
+        calc(var(--gi, 0) * -1.2px) 0 0 rgba(255, 60, 100, 0.75),
+        calc(var(--gi, 0) * 1.2px) 0 0 rgba(60, 160, 255, 0.75),
+        0 0 calc(8px + var(--gi, 0) * 12px) rgba(255, 255, 255, 0.7);
+    }
+    .screen2-text.glitching.intensity-high::before {
+      color: #ff2e5f; mix-blend-mode: screen;
+      animation: tvSliceA 0.55s infinite steps(1);
+    }
+    .screen2-text.glitching.intensity-high::after {
+      color: #2ea8ff; mix-blend-mode: screen;
+      animation: tvSliceB 0.62s infinite steps(1);
+    }
+    @keyframes tvShake {
+      0%   { transform: translate(0, 0) skewX(0deg); }
+      20%  { transform: translate(calc(var(--gi, 0) * -0.9px), calc(var(--gi, 0) * 0.3px)) skewX(calc(var(--gi, 0) * 0.2deg)); }
+      40%  { transform: translate(calc(var(--gi, 0) * 1.1px), calc(var(--gi, 0) * -0.4px)) skewX(calc(var(--gi, 0) * -0.25deg)); }
+      60%  { transform: translate(calc(var(--gi, 0) * -0.6px), calc(var(--gi, 0) * 0.2px)) skewX(calc(var(--gi, 0) * 0.15deg)); }
+      80%  { transform: translate(calc(var(--gi, 0) * 0.8px), calc(var(--gi, 0) * 0.35px)) skewX(calc(var(--gi, 0) * 0.2deg)); }
+      100% { transform: translate(0, 0) skewX(0deg); }
+    }
+    @keyframes tvSliceA {
+      0%   { transform: translate(0, 0); clip-path: inset(0 0 0 0); opacity: 0; }
+      25%  { transform: translate(calc(var(--gi, 0) * -4px), 0); clip-path: inset(24% 0 46% 0); opacity: 0.6; }
+      50%  { transform: translate(0, 0); clip-path: inset(0 0 0 0); opacity: 0; }
+      75%  { transform: translate(calc(var(--gi, 0) * 3px), 0); clip-path: inset(60% 0 16% 0); opacity: 0.55; }
+      100% { transform: translate(0, 0); clip-path: inset(0 0 0 0); opacity: 0; }
+    }
+    @keyframes tvSliceB {
+      0%   { transform: translate(0, 0); clip-path: inset(0 0 0 0); opacity: 0; }
+      25%  { transform: translate(calc(var(--gi, 0) * 4px), 0); clip-path: inset(34% 0 36% 0); opacity: 0.55; }
+      50%  { transform: translate(0, 0); clip-path: inset(0 0 0 0); opacity: 0; }
+      75%  { transform: translate(calc(var(--gi, 0) * -3px), 0); clip-path: inset(70% 0 8% 0); opacity: 0.5; }
+      100% { transform: translate(0, 0); clip-path: inset(0 0 0 0); opacity: 0; }
+    }
+
+    .type-cursor {
+      display: inline-block; width: 3px; height: 1em;
+      background-color: #ffffff; margin-left: 4px;
+      vertical-align: -0.08em;
+      box-shadow: 0 0 10px rgba(255,255,255,0.9), 0 0 20px rgba(200,220,255,0.6);
+      animation: cursorBlink 0.85s ease-in-out infinite;
+      border-radius: 2px;
+      transition: transform 0.35s ease, box-shadow 0.35s ease;
+    }
+    .type-cursor.hidden { display: none; }
+    .type-cursor.finished { animation: cursorFadeOut 1.5s ease-out forwards; }
+    .type-cursor.ready {
+      transform: scale(1.4);
+      box-shadow: 0 0 14px rgba(255,255,255,1), 0 0 28px rgba(200,220,255,0.9);
+    }
+    @keyframes cursorBlink { 0%, 45% { opacity: 1; } 50%, 95% { opacity: 0.15; } 100% { opacity: 1; } }
+    @keyframes cursorFadeOut { 0% { opacity: 1; } 60% { opacity: 1; } 100% { opacity: 0; } }
+
+    .typed-char {
+      display: inline-block;
+      animation: charAppear 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    @keyframes charAppear {
+      0% { opacity: 0; transform: translateY(6px) scale(0.9); filter: blur(6px); text-shadow: 0 0 30px rgba(255,255,255,1); }
+      60% { opacity: 1; transform: translateY(0) scale(1.02); filter: blur(0.4px); }
+      100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+    }
+
+    /* ============ TOMBOL AGAIN / NEVER ============ */
+    .choice-buttons {
+      margin-top: 2.8rem;
+      display: flex; gap: 2rem;
+      opacity: 0; visibility: hidden;
+      transform: translateY(14px);
+      transition: opacity 0.9s ease, transform 0.9s ease, visibility 0.9s;
+      pointer-events: none; z-index: 11;
+    }
+    .choice-buttons.visible {
+      opacity: 1; visibility: visible;
+      transform: translateY(0); pointer-events: auto;
+    }
+    .choice-btn {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.35);
+      color: rgba(255,255,255,0.85);
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.85rem; font-weight: 400;
+      letter-spacing: 0.35rem; text-transform: uppercase;
+      padding: 0.85rem 2.4rem 0.85rem 2.75rem;
+      border-radius: 999px; cursor: pointer;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      text-shadow: 0 0 10px rgba(255,255,255,0.4);
+      position: relative; overflow: hidden; outline: none;
+    }
+    .choice-btn::after {
+      content: ''; position: absolute; inset: 0;
+      border-radius: inherit;
+      background: radial-gradient(circle at center, rgba(255,255,255,0.12) 0%, transparent 65%);
+      opacity: 0; transition: opacity 0.4s ease;
+      pointer-events: none;
+    }
+    .choice-btn:hover {
+      border-color: rgba(255,255,255,0.9);
+      color: #fff; letter-spacing: 0.42rem;
+      box-shadow:
+        0 0 20px rgba(255,255,255,0.3),
+        0 0 45px rgba(150,200,255,0.18),
+        inset 0 0 20px rgba(255,255,255,0.05);
+      text-shadow: 0 0 18px rgba(255,255,255,0.95);
+    }
+    .choice-btn:hover::after { opacity: 1; }
+    .choice-btn:active { transform: scale(0.96); }
+  </style>
+</head>
+<body>
+
+  <canvas id="space-canvas"></canvas>
+
+  <div id="mobile-prompt">
+    <h2 class="mobile-title">Changes to Desktop</h2>
+    <p class="mobile-desc">Not everything is visible on your vision</p>
+  </div>
+
+  <button class="hint-btn" id="hintBtn" type="button" aria-label="Hint">?</button>
+
+  <div class="hint-overlay" id="hintOverlay">
+    <div class="hint-text">Every circle carries my name.
+I begin with three, yet I never reach an end.</div>
+  </div>
+
+  <div id="screen1">
+    <div class="input-wrapper">
+      <div class="display-text placeholder" id="displayText">......</div>
+      <input type="text" id="codeInput" class="secret-input" autocomplete="off" spellcheck="false" maxlength="20" draggable="false">
+      <div id="errorMsg" class="error-msg">Access Denied</div>
+    </div>
+  </div>
+
+  <div id="screen2">
+    <h1 class="screen2-text" id="screen2Text" data-text=""><span id="typedTarget"></span><span class="type-cursor hidden" id="typeCursor"></span></h1>
+    <div class="choice-buttons" id="choiceButtons">
+      <button class="choice-btn" id="btnAgain" type="button">Again</button>
+      <button class="choice-btn" id="btnNever" type="button">Never</button>
+    </div>
+  </div>
+
+  <script>
+    // ===================================================================
+    // ANTI-COPY
+    // ===================================================================
+    (function () {
+      document.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); return false; }, true);
+      document.addEventListener('selectstart', (e) => { e.preventDefault(); return false; }, true);
+      document.addEventListener('mousedown', (e) => { if (e.detail > 1) { e.preventDefault(); return false; } }, true);
+      document.addEventListener('dragstart', (e) => { e.preventDefault(); return false; }, true);
+      document.addEventListener('drop', (e) => { e.preventDefault(); return false; }, true);
+      document.addEventListener('copy', (e) => { e.preventDefault(); if (e.clipboardData) e.clipboardData.setData('text/plain', ''); return false; }, true);
+      document.addEventListener('cut', (e) => { e.preventDefault(); if (e.clipboardData) e.clipboardData.setData('text/plain', ''); return false; }, true);
+      document.addEventListener('paste', (e) => e.preventDefault(), true);
+      document.addEventListener('keydown', (e) => {
+        const k = (e.key || '').toLowerCase();
+        if ((e.ctrlKey || e.metaKey) && ['c','a','x','u','s','p'].includes(k)) { e.preventDefault(); e.stopPropagation(); return false; }
+        if (e.key === 'F12') { e.preventDefault(); return false; }
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && ['i','j','c'].includes(k)) { e.preventDefault(); return false; }
+        if ((e.ctrlKey || e.metaKey) && e.key === 'U') { e.preventDefault(); return false; }
+      }, true);
+      setInterval(() => {
+        const sel = window.getSelection && window.getSelection();
+        if (sel && sel.rangeCount > 0 && String(sel).length > 0) sel.removeAllRanges();
+      }, 200);
+    })();
+
+    // ===================================================================
+    // DETEKSI PERANGKAT
+    // ===================================================================
+    (function () {
+      function checkDesktopLock() {
+        const ua = navigator.userAgent || '';
+        const isMobile = /Mobile|iPhone|iPod|Windows Phone|IEMobile|BlackBerry|Opera Mini|Opera Mobi|webOS/i.test(ua);
+        const prompt = document.getElementById('mobile-prompt');
+        if (!prompt) return;
+        if (isMobile) { prompt.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+        else { prompt.style.display = 'none'; document.body.style.overflow = ''; }
+      }
+      checkDesktopLock();
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', checkDesktopLock);
+      window.addEventListener('resize', () => setTimeout(checkDesktopLock, 100));
+      window.addEventListener('orientationchange', checkDesktopLock);
+      window.addEventListener('pageshow', checkDesktopLock);
+    })();
+
+    // ===================================================================
+    // AUDIO
+    // ===================================================================
+    let audioCtx = null, isAudioActive = false;
+
+    function initAudio() {
+      if (isAudioActive) return;
+      const AC = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AC();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      isAudioActive = true;
+      playOriginalSpaceAmbient();
+      window.removeEventListener('click', initAudio);
+      window.removeEventListener('keydown', initAudio);
+      window.removeEventListener('touchstart', initAudio);
+      window.removeEventListener('mousemove', initAudio);
+    }
+
+    function playOriginalSpaceAmbient() {
+      const now = audioCtx.currentTime;
+      const bufferSize = audioCtx.sampleRate * 2;
+      const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const output = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
+      const whiteNoise = audioCtx.createBufferSource();
+      whiteNoise.buffer = noiseBuffer; whiteNoise.loop = true;
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(140, now);
+      const lfo = audioCtx.createOscillator();
+      lfo.frequency.setValueAtTime(0.05, now);
+      const lfoGain = audioCtx.createGain();
+      lfoGain.gain.setValueAtTime(80, now);
+      lfo.connect(lfoGain); lfoGain.connect(filter.frequency);
+      const masterGain = audioCtx.createGain();
+      masterGain.gain.setValueAtTime(0.0001, now);
+      masterGain.gain.linearRampToValueAtTime(0.25, now + 3.0);
+      whiteNoise.connect(filter); filter.connect(masterGain);
+      masterGain.connect(audioCtx.destination);
+      whiteNoise.start(now); lfo.start(now);
+    }
+
+    function playGlitchSound() {
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(110, now);
+      osc.frequency.linearRampToValueAtTime(55, now + 0.2);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.linearRampToValueAtTime(0.15, now + 0.02);
+      gain.gain.linearRampToValueAtTime(0.0001, now + 0.2);
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.start(now); osc.stop(now + 0.2);
+    }
+
+    function playSuccessSound() {
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(180, now);
+      osc.frequency.exponentialRampToValueAtTime(520, now + 1.8);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.linearRampToValueAtTime(0.35, now + 0.5);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.5);
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.start(now); osc.stop(now + 2.5);
+    }
+
+    function playTypeTick() {
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1400 + Math.random() * 400, now);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.linearRampToValueAtTime(0.02, now + 0.005);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.start(now); osc.stop(now + 0.06);
+    }
+
+    function playDeleteTick() {
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(700 + Math.random() * 200, now);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.linearRampToValueAtTime(0.015, now + 0.004);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.04);
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.start(now); osc.stop(now + 0.05);
+    }
+
+    function playEscalatingGlitchSound(level) {
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+      const intensity = level / MAX_GLITCH;
+
+      const dur = 0.12 + intensity * 0.14;
+      const bufSize = Math.floor(audioCtx.sampleRate * dur);
+      const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < bufSize; i++) {
+        const env = Math.sin((i / bufSize) * Math.PI);
+        data[i] = (Math.random() * 2 - 1) * env;
+      }
+      const src = audioCtx.createBufferSource();
+      src.buffer = buf;
+      const bp = audioCtx.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.frequency.setValueAtTime(700 + intensity * 1600 + Math.random() * 200, now);
+      bp.Q.setValueAtTime(1.6, now);
+      const g = audioCtx.createGain();
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.linearRampToValueAtTime(0.05 + intensity * 0.1, now + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+      src.connect(bp); bp.connect(g); g.connect(audioCtx.destination);
+      src.start(now); src.stop(now + dur + 0.02);
+
+      if (intensity > 0.3) {
+        const chirp = audioCtx.createOscillator();
+        const cg = audioCtx.createGain();
+        chirp.type = 'sine';
+        chirp.frequency.setValueAtTime(1100 + intensity * 1400, now);
+        chirp.frequency.exponentialRampToValueAtTime(450 + Math.random() * 250, now + 0.09);
+        cg.gain.setValueAtTime(0.0001, now);
+        cg.gain.linearRampToValueAtTime(0.015 + intensity * 0.03, now + 0.008);
+        cg.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+        chirp.connect(cg); cg.connect(audioCtx.destination);
+        chirp.start(now); chirp.stop(now + 0.14);
+      }
+
+      if (intensity > 0.5) {
+        const sub = audioCtx.createOscillator();
+        const sg = audioCtx.createGain();
+        sub.type = 'sine';
+        sub.frequency.setValueAtTime(85, now);
+        sub.frequency.exponentialRampToValueAtTime(45, now + 0.16);
+        sg.gain.setValueAtTime(0.0001, now);
+        sg.gain.linearRampToValueAtTime(0.04 + intensity * 0.05, now + 0.02);
+        sg.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
+        sub.connect(sg); sg.connect(audioCtx.destination);
+        sub.start(now); sub.stop(now + 0.22);
+      }
+    }
+
+    function playCrtOffSound() {
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+
+      const bufSize = Math.floor(audioCtx.sampleRate * 0.12);
+      const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < bufSize; i++) {
+        const env = Math.sin((i / bufSize) * Math.PI);
+        d[i] = (Math.random() * 2 - 1) * env;
+      }
+      const src = audioCtx.createBufferSource();
+      src.buffer = buf;
+      const hpf = audioCtx.createBiquadFilter();
+      hpf.type = 'highpass';
+      hpf.frequency.setValueAtTime(900, now);
+      const g = audioCtx.createGain();
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.linearRampToValueAtTime(0.22, now + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
+      src.connect(hpf); hpf.connect(g); g.connect(audioCtx.destination);
+      src.start(now); src.stop(now + 0.25);
+
+      const whine = audioCtx.createOscillator();
+      const wg = audioCtx.createGain();
+      whine.type = 'sine';
+      whine.frequency.setValueAtTime(15500, now);
+      whine.frequency.exponentialRampToValueAtTime(140, now + 1.8);
+      wg.gain.setValueAtTime(0.0001, now);
+      wg.gain.linearRampToValueAtTime(0.08, now + 0.04);
+      wg.gain.exponentialRampToValueAtTime(0.0001, now + 1.9);
+      whine.connect(wg); wg.connect(audioCtx.destination);
+      whine.start(now); whine.stop(now + 1.95);
+
+      const thunk = audioCtx.createOscillator();
+      const tg = audioCtx.createGain();
+      thunk.type = 'triangle';
+      thunk.frequency.setValueAtTime(220, now + 1.8);
+      thunk.frequency.exponentialRampToValueAtTime(38, now + 2.4);
+      tg.gain.setValueAtTime(0.0001, now + 1.8);
+      tg.gain.linearRampToValueAtTime(0.28, now + 1.85);
+      tg.gain.exponentialRampToValueAtTime(0.0001, now + 2.5);
+      thunk.connect(tg); tg.connect(audioCtx.destination);
+      thunk.start(now + 1.8); thunk.stop(now + 2.55);
+
+      const click = audioCtx.createOscillator();
+      const cg = audioCtx.createGain();
+      click.type = 'square';
+      click.frequency.setValueAtTime(70, now + 3.0);
+      cg.gain.setValueAtTime(0.0001, now + 3.0);
+      cg.gain.linearRampToValueAtTime(0.12, now + 3.02);
+      cg.gain.exponentialRampToValueAtTime(0.0001, now + 3.1);
+      click.connect(cg); cg.connect(audioCtx.destination);
+      click.start(now + 3.0); click.stop(now + 3.15);
+    }
+
+    window.addEventListener('click', initAudio);
+    window.addEventListener('keydown', initAudio);
+    window.addEventListener('touchstart', initAudio);
+    window.addEventListener('mousemove', initAudio, { once: true });
+
+    // ===================================================================
+    // CANVAS STARFIELD
+    // ===================================================================
+    const canvas = document.getElementById('space-canvas');
+    const ctx = canvas.getContext('2d');
+    let width = canvas.width = window.innerWidth;
+    let height = canvas.height = window.innerHeight;
+    window.addEventListener('resize', () => {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    });
+
+    const angleRad = (180 + 35) * Math.PI / 180;
+    const moveSpeed = 0.12;
+    const vx = Math.cos(angleRad) * moveSpeed;
+    const vy = Math.sin(angleRad) * moveSpeed;
+
+    const STAR_COUNT = 300;
+    let stars = [];
+    const starColors = [
+      { r: 255, g: 255, b: 255 }, { r: 235, g: 242, b: 255 },
+      { r: 255, g: 245, b: 220 }, { r: 210, g: 230, b: 255 }
+    ];
+
+    function initStars() {
+      stars = [];
+      for (let i = 0; i < STAR_COUNT; i++) {
+        const color = starColors[Math.floor(Math.random() * starColors.length)];
+        stars.push({
+          x: Math.random() * width, y: Math.random() * height,
+          radius: Math.random() < 0.85 ? Math.random() * 1.2 + 0.3 : Math.random() * 2.2 + 1.2,
+          color, baseAlpha: Math.random() * 0.5 + 0.3,
+          twinkleSpeed: Math.random() * 0.015 + 0.005,
+          twinklePhase: Math.random() * Math.PI * 2,
+          hasFlare: Math.random() < 0.15
+        });
+      }
+    }
+
+    function renderStarfield(targetCtx, offsetX = 0, offsetY = 0, colorOverride = null) {
+      for (let i = 0; i < stars.length; i++) {
+        const star = stars[i];
+        const currentAlpha = Math.max(0.1, star.baseAlpha + Math.sin(star.twinklePhase) * 0.25);
+        const x = star.x + offsetX, y = star.y + offsetY;
+        targetCtx.save();
+        if (colorOverride) {
+          targetCtx.beginPath();
+          targetCtx.fillStyle = `rgba(${colorOverride.r}, ${colorOverride.g}, ${colorOverride.b}, ${currentAlpha})`;
+          targetCtx.arc(x, y, star.radius, 0, Math.PI * 2);
+          targetCtx.fill();
+        } else {
+          const rad = star.radius;
+          const g = targetCtx.createRadialGradient(x, y, 0, x, y, rad * 2.5);
+          g.addColorStop(0, `rgba(${star.color.r}, ${star.color.g}, ${star.color.b}, ${currentAlpha})`);
+          g.addColorStop(0.4, `rgba(${star.color.r}, ${star.color.g}, ${star.color.b}, ${currentAlpha * 0.5})`);
+          g.addColorStop(1, `rgba(${star.color.r}, ${star.color.g}, ${star.color.b}, 0)`);
+          targetCtx.beginPath();
+          targetCtx.fillStyle = g;
+          targetCtx.arc(x, y, rad * 2.5, 0, Math.PI * 2);
+          targetCtx.fill();
+          if (star.hasFlare && star.radius > 1.5) {
+            targetCtx.strokeStyle = `rgba(${star.color.r}, ${star.color.g}, ${star.color.b}, ${currentAlpha * 0.35})`;
+            targetCtx.lineWidth = 0.5;
+            const fl = star.radius * 4;
+            targetCtx.beginPath();
+            targetCtx.moveTo(x - fl, y); targetCtx.lineTo(x + fl, y);
+            targetCtx.moveTo(x, y - fl); targetCtx.lineTo(x, y + fl);
+            targetCtx.stroke();
+          }
+        }
+        targetCtx.restore();
+      }
+    }
+
+    // ===================================================================
+    // JAGGED CURVE PATH
+    // ===================================================================
+    function makeNoise(i) {
+      return Math.sin(i * 0.55 + 1.1) * 0.55
+           + Math.sin(i * 1.35 + 2.3) * 0.30
+           + Math.sin(i * 2.9 + 0.7) * 0.18
+           + Math.sin(i * 5.1 + 4.1) * 0.09;
+    }
+
+    function buildTopCurtainPath() {
+      const segments = 70;
+      const yEdge = 12, yMid = 62, noiseAmt = 3.5;
+      let d = 'M 0 0 L 1000 0 L 1000 ' + yEdge;
+      const cx = 500;
+      const cy = 2 * yMid - yEdge;
+      for (let i = 1; i <= segments; i++) {
+        const t = i / segments;
+        const mt = 1 - t;
+        const x = mt * mt * 1000 + 2 * mt * t * cx;
+        const yBase = mt * mt * yEdge + 2 * mt * t * cy + t * t * yEdge;
+        const y = yBase + makeNoise(i) * noiseAmt;
+        d += ' L ' + x.toFixed(1) + ' ' + y.toFixed(1);
+      }
+      return d + ' Z';
+    }
+
+    function buildBottomCurtainPath() {
+      const segments = 70;
+      const yEdge = 68, yMid = 18, noiseAmt = 3.5;
+      let d = 'M 0 80 L 1000 80 L 1000 ' + yEdge;
+      const cx = 500;
+      const cy = 2 * yMid - yEdge;
+      for (let i = 1; i <= segments; i++) {
+        const t = i / segments;
+        const mt = 1 - t;
+        const x = mt * mt * 1000 + 2 * mt * t * cx;
+        const yBase = mt * mt * yEdge + 2 * mt * t * cy + t * t * yEdge;
+        const y = yBase + makeNoise(i) * noiseAmt;
+        d += ' L ' + x.toFixed(1) + ' ' + y.toFixed(1);
+      }
+      return d + ' Z';
+    }
+
+    // ===================================================================
+    // GLITCH RENDER
+    // ===================================================================
+    let isGlitching = false, glitchDuration = 0;
+    let glitchLevel = 0;
+    const MAX_GLITCH = 8;
+    let finalPhase = false;
+    let blackoutDone = false;
+
+    function renderGlitchSmall() {
+      const ro = (Math.random() - 0.5) * 18;
+      const bo = (Math.random() - 0.5) * 18;
+      ctx.globalCompositeOperation = 'screen';
+      renderStarfield(ctx, ro, (Math.random() - 0.5) * 4, { r: 255, g: 30, b: 60 });
+      renderStarfield(ctx, 0, 0, { r: 30, g: 255, b: 120 });
+      renderStarfield(ctx, bo, (Math.random() - 0.5) * 4, { r: 30, g: 120, b: 255 });
+      ctx.globalCompositeOperation = 'source-over';
+      const sliceCount = Math.floor(Math.random() * 4) + 1;
+      for (let i = 0; i < sliceCount; i++) {
+        const sy = Math.random() * height;
+        const sh = Math.random() * 30 + 5;
+        const sx = (Math.random() - 0.5) * 25;
+        ctx.drawImage(canvas, 0, sy, width, sh, sx, sy, width, sh);
+      }
+    }
+
+    function renderGlitchEscalating() {
+      const t = glitchLevel / MAX_GLITCH;
+
+      const rgbAmt = 3 + t * 24;
+      const ro = (Math.random() - 0.5) * rgbAmt;
+      const bo = (Math.random() - 0.5) * rgbAmt;
+
+      ctx.globalCompositeOperation = 'screen';
+      renderStarfield(ctx, ro, 0, { r: 255, g: 60, b: 100 });
+      renderStarfield(ctx, 0, 0, { r: 60, g: 255, b: 140 });
+      renderStarfield(ctx, bo, 0, { r: 60, g: 140, b: 255 });
+      ctx.globalCompositeOperation = 'source-over';
+
+      if (t > 0.12) {
+        const sp = (t - 0.12) / 0.88;
+        const count = Math.floor(1 + sp * 4);
+        for (let i = 0; i < count; i++) {
+          const sy = Math.random() * height;
+          const sh = 20 + Math.random() * (30 + sp * 60);
+          const sx = (Math.random() - 0.5) * (6 + sp * 45);
+          ctx.drawImage(canvas, 0, sy, width, sh, sx, sy, width, sh);
+        }
+      }
+
+      if (t > 0.25) {
+        ctx.globalAlpha = (t - 0.25) * 0.4;
+        for (let y = 0; y < height; y += 6) {
+          ctx.fillStyle = 'rgba(0,0,0,0.5)';
+          ctx.fillRect(0, y, width, 1);
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      if (t > 0.5 && Math.random() < 0.08) {
+        ctx.fillStyle = `rgba(0,0,0,${0.08 + (t - 0.5) * 0.5})`;
+        ctx.fillRect(0, 0, width, height);
+      }
+
+      if (t > 0.75 && Math.random() < 0.25) {
+        const dots = Math.floor((t - 0.75) * 60);
+        for (let n = 0; n < dots; n++) {
+          ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.1})`;
+          ctx.fillRect(Math.random() * width, Math.random() * height, 1, 1);
+        }
+      }
+    }
+
+    function animate() {
+      for (let i = 0; i < stars.length; i++) {
+        const s = stars[i];
+        s.x += vx; s.y += vy; s.twinklePhase += s.twinkleSpeed;
+        if (s.x < -10) s.x = width + 10;
+        if (s.y < -10) s.y = height + 10;
+      }
+
+      ctx.clearRect(0, 0, width, height);
+
+      if (glitchLevel > 0) {
+        renderGlitchEscalating();
+      } else if (isGlitching && glitchDuration > 0) {
+        glitchDuration--;
+        renderGlitchSmall();
+        if (glitchDuration <= 0) isGlitching = false;
+      } else {
+        renderStarfield(ctx);
+      }
+
+      if (glitchLevel > 0) {
+        const t = glitchLevel / MAX_GLITCH;
+        const shake = t * 2.5;
+        screen2.style.transform =
+          `translate(${(Math.random() - 0.5) * shake}px, ${(Math.random() - 0.5) * shake}px)`;
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    // ===================================================================
+    // DOM REFS
+    // ===================================================================
+    const inputEl = document.getElementById('codeInput');
+    const displayText = document.getElementById('displayText');
+    const errorEl = document.getElementById('errorMsg');
+    const screen1 = document.getElementById('screen1');
+    const screen2 = document.getElementById('screen2');
+    const screen2Text = document.getElementById('screen2Text');
+    const typedTarget = document.getElementById('typedTarget');
+    const typeCursor = document.getElementById('typeCursor');
+    const choiceButtons = document.getElementById('choiceButtons');
+    const btnAgain = document.getElementById('btnAgain');
+    const btnNever = document.getElementById('btnNever');
+    const hintBtn = document.getElementById('hintBtn');
+    const hintOverlay = document.getElementById('hintOverlay');
+
+    // ===================================================================
+    // DISPLAY INPUT & SYNC
+    // ===================================================================
+    function syncDisplay() {
+      const val = inputEl.value;
+      if (val.length === 0) {
+        displayText.textContent = '......';
+        displayText.classList.add('placeholder');
+      } else {
+        displayText.textContent = val;
+        displayText.classList.remove('placeholder');
+      }
+    }
+    inputEl.addEventListener('input', syncDisplay);
+    syncDisplay();
+
+    function syncDataText() {
+      let text = '';
+      const nodes = typedTarget.childNodes;
+      for (let i = 0; i < nodes.length; i++) {
+        const n = nodes[i];
+        if (n.nodeType === 1 && n.tagName === 'BR') text += '\n';
+        else if (n.textContent) text += n.textContent;
+      }
+      screen2Text.setAttribute('data-text', text);
+    }
+
+    screen1.addEventListener('click', () => {
+      if (!transitioned) inputEl.focus();
+    });
+
+    function triggerGlitch() {
+      isGlitching = true; glitchDuration = 20;
+      playGlitchSound();
+      errorEl.classList.add('visible');
+      setTimeout(() => errorEl.classList.remove('visible'), 1800);
+    }
+
+    // ===================================================================
+    // HINT
+    // ===================================================================
+    let hintTimeout = null;
+    hintBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      hintOverlay.classList.add('visible');
+      if (hintTimeout) clearTimeout(hintTimeout);
+      hintTimeout = setTimeout(() => {
+        hintOverlay.classList.remove('visible');
+        hintTimeout = null;
+      }, 14000);
+    });
+    hintOverlay.addEventListener('click', () => {
+      if (hintTimeout) clearTimeout(hintTimeout);
+      hintOverlay.classList.remove('visible');
+      hintTimeout = null;
+    });
+
+    // ===================================================================
+    // AUTO-FIT FONT SIZE
+    // ===================================================================
+    const measureCanvas = document.createElement('canvas');
+    const measureCtx = measureCanvas.getContext('2d');
+
+    function measureLineWidth(line, fontSize) {
+      const ls = fontSize * 0.145;
+      measureCtx.font = `300 ${fontSize}px 'Space Grotesk', sans-serif`;
+      const base = measureCtx.measureText(line).width;
+      return base + ls * Math.max(0, line.length - 1);
+    }
+
+    let currentTargetText = '';
+
+    function fitTextSize(text) {
+      if (!text) return;
+      currentTargetText = text;
+      const lines = text.split('\n').filter(l => l.length > 0);
+      if (lines.length === 0) return;
+
+      const maxWidth = window.innerWidth * 0.82;
+      const maxHeight = window.innerHeight * 0.72;
+
+      let lo = 12, hi = 56, best = 12;
+      for (let iter = 0; iter < 18; iter++) {
+        const mid = (lo + hi) / 2;
+        let fits = true;
+        let totalH = 0;
+        for (const line of lines) {
+          if (measureLineWidth(line, mid) > maxWidth) { fits = false; break; }
+          totalH += mid * 1.5;
+        }
+        if (fits && totalH <= maxHeight) { best = mid; lo = mid; }
+        else { hi = mid; }
+      }
+
+      best = Math.max(14, best * 0.96);
+      screen2Text.style.fontSize = best + 'px';
+      screen2Text.style.letterSpacing = (best * 0.145) + 'px';
+      screen2Text.style.paddingLeft = (best * 0.145) + 'px';
+    }
+
+    window.addEventListener('resize', () => {
+      if (currentTargetText) fitTextSize(currentTargetText);
+    });
+
+    // ===================================================================
+    // STATE MACHINE
+    // ===================================================================
+    const phrases = [
+      "The clock does not lie.\nIt only speaks a language you have forgotten.",
+      "X = √196 - 2³ + 3!/2",
+      "Y = 2x² + √225 - 10",
+      "X : Y\nNot a ratio. Not yet.",
+      "One must be reduced.\nThe other must be read as it was written centuries ago.",
+      "Again, or never?"
+    ];
+    const FINAL_TEXT = "Really?";
+
+    const EQUATION_INDEXES = [1, 2];
+    const CHOICE_INDEX = 5;
+    const INTRO_TEXT = "Are You Sure?";
+
+    let phraseIndex = 0;
+    let mode = 'delete';
+    let state = 'idle';
+    let transitioned = false;
+    let awaitingChoice = false;
+
+    // ===================================================================
+    // SPAM TRACKER
+    // ===================================================================
+    const clickTimes = [];
+    function registerClick() {
+      const now = performance.now();
+      clickTimes.push(now);
+      while (clickTimes.length && now - clickTimes[0] > 1200) clickTimes.shift();
+    }
+    function getSpamMultiplier() {
+      const n = clickTimes.length;
+      if (n <= 1) return 1;
+      return Math.min(1 + (n - 1) * 0.5, 4.5);
+    }
+
+    function setCursorReady(isReady) {
+      if (isReady) typeCursor.classList.add('ready');
+      else typeCursor.classList.remove('ready');
+    }
+
+    function updateTextStyle(phraseIdx) {
+      if (EQUATION_INDEXES.indexOf(phraseIdx) !== -1) {
+        screen2Text.classList.add('equation');
+      } else {
+        screen2Text.classList.remove('equation');
+      }
+    }
+
+    // ===================================================================
+    // TYPING
+    // ===================================================================
+    let currentWord = null;
+
+    function typeText(text, onDone) {
+      state = 'typing';
+      setCursorReady(false);
+      typeCursor.classList.remove('hidden');
+      typeCursor.classList.remove('finished');
+      currentWord = null;
+
+      fitTextSize(text);
+
+      let i = 0;
+      function step() {
+        if (i >= text.length) {
+          state = 'idle';
+          setCursorReady(true);
+          onDone && onDone();
+          return;
+        }
+        const ch = text.charAt(i);
+
+        if (ch === '\n') {
+          currentWord = null;
+          const br = document.createElement('br');
+          typedTarget.appendChild(br);
+          syncDataText();
+          i++;
+          setTimeout(step, 220);
+          return;
+        }
+
+        if (ch === ' ') {
+          currentWord = null;
+          typedTarget.appendChild(document.createTextNode(' '));
+          syncDataText();
+          i++;
+          setTimeout(step, 55);
+          return;
+        }
+
+        if (!currentWord) {
+          currentWord = document.createElement('span');
+          currentWord.className = 'word';
+          typedTarget.appendChild(currentWord);
+        }
+        const span = document.createElement('span');
+        span.className = 'typed-char';
+        span.textContent = ch;
+        currentWord.appendChild(span);
+        syncDataText();
+        playTypeTick();
+        i++;
+
+        let delay = 85 + Math.random() * 55;
+        if (ch === ',' || ch === '.') delay += 180;
+        setTimeout(step, delay);
+      }
+      setTimeout(step, 300);
+    }
+
+    // ===================================================================
+    // DELETING
+    // ===================================================================
+    function deleteText(onDone) {
+      state = 'deleting';
+      setCursorReady(false);
+
+      const spam = getSpamMultiplier();
+      const stepMs = Math.max(1, Math.round(6 / spam));
+      const fadeMs = Math.max(18, Math.round(28 / spam));
+
+      function step() {
+        const last = typedTarget.lastChild;
+        if (!last) { state = 'idle'; syncDataText(); onDone && onDone(); return; }
+
+        if (last.nodeType === 3 || last.tagName === 'BR') {
+          last.remove();
+          syncDataText();
+          playDeleteTick();
+          setTimeout(step, stepMs);
+          return;
+        }
+
+        if (last.classList && last.classList.contains('word')) {
+          const inner = last.lastChild;
+          if (!inner) {
+            last.remove();
+            syncDataText();
+            setTimeout(step, stepMs);
+            return;
+          }
+          inner.style.transition = `opacity ${fadeMs}ms ease, transform ${fadeMs}ms ease`;
+          inner.style.opacity = '0';
+          inner.style.transform = 'translateY(-4px) scale(0.8)';
+          setTimeout(() => {
+            if (inner.parentNode) inner.remove();
+            if (last.parentNode && last.childElementCount === 0) last.remove();
+            syncDataText();
+          }, fadeMs);
+          playDeleteTick();
+          setTimeout(step, stepMs);
+          return;
+        }
+
+        last.remove();
+        syncDataText();
+        setTimeout(step, stepMs);
+      }
+      step();
+    }
+
+    // ===================================================================
+    // GLITCH APPLY & ESCALATE
+    // ===================================================================
+    function applyGlitchIntensity() {
+      const gi = glitchLevel / MAX_GLITCH;
+      screen2Text.style.setProperty('--gi', String(gi));
+      if (gi > 0) screen2Text.classList.add('glitching');
+      else screen2Text.classList.remove('glitching');
+      if (gi > 0.5) screen2Text.classList.add('intensity-high');
+      else screen2Text.classList.remove('intensity-high');
+    }
+
+    function escalateGlitch() {
+      if (blackoutDone) return;
+      if (glitchLevel >= MAX_GLITCH) return;
+      glitchLevel++;
+      playEscalatingGlitchSound(glitchLevel);
+      applyGlitchIntensity();
+      if (glitchLevel >= MAX_GLITCH) {
+        setTimeout(triggerCRT, 1200);
+      }
+    }
+
+    // ===================================================================
+    // CRT CURTAIN
+    // ===================================================================
+    function triggerCRT() {
+      if (blackoutDone) return;
+      blackoutDone = true;
+      playCrtOffSound();
+
+      canvas.style.transition = 'filter 0.25s ease';
+      screen2.style.transition = 'filter 0.25s ease';
+      canvas.style.filter = 'brightness(1.7) contrast(1.15)';
+      screen2.style.filter = 'brightness(1.7) contrast(1.15)';
+
+      const curtainTopWrap = document.createElement('div');
+      curtainTopWrap.style.cssText = `
+        position: fixed; top: 0; left: 0;
+        width: 100vw; height: 0;
+        background: #000;
+        z-index: 9999990;
+        pointer-events: none;
+        will-change: height;
+      `;
+      const svgTop = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svgTop.setAttribute('viewBox', '0 0 1000 80');
+      svgTop.setAttribute('preserveAspectRatio', 'none');
+      svgTop.style.cssText = `
+        position: absolute; top: 100%; left: 0;
+        width: 100%; height: 80px;
+        display: block; overflow: visible;
+        pointer-events: none;
+      `;
+      const pathTop = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      pathTop.setAttribute('fill', '#000');
+      pathTop.setAttribute('d', buildTopCurtainPath());
+      svgTop.appendChild(pathTop);
+      curtainTopWrap.appendChild(svgTop);
+      document.body.appendChild(curtainTopWrap);
+
+      const curtainBottomWrap = document.createElement('div');
+      curtainBottomWrap.style.cssText = `
+        position: fixed; bottom: 0; left: 0;
+        width: 100vw; height: 0;
+        background: #000;
+        z-index: 9999990;
+        pointer-events: none;
+        will-change: height;
+      `;
+      const svgBottom = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svgBottom.setAttribute('viewBox', '0 0 1000 80');
+      svgBottom.setAttribute('preserveAspectRatio', 'none');
+      svgBottom.style.cssText = `
+        position: absolute; bottom: 100%; left: 0;
+        width: 100%; height: 80px;
+        display: block; overflow: visible;
+        pointer-events: none;
+      `;
+      const pathBottom = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      pathBottom.setAttribute('fill', '#000');
+      pathBottom.setAttribute('d', buildBottomCurtainPath());
+      svgBottom.appendChild(pathBottom);
+      curtainBottomWrap.appendChild(svgBottom);
+      document.body.appendChild(curtainBottomWrap);
+
+      const glowLine = document.createElement('div');
+      glowLine.style.cssText = `
+        position: fixed; top: 50%; left: 50%;
+        width: 100vw; height: 1px;
+        margin-top: -0.5px; margin-left: -50vw;
+        background: #ffffff;
+        border-radius: 0;
+        z-index: 9999995;
+        pointer-events: none;
+        opacity: 0;
+        transform: scaleY(0);
+        filter: blur(0px);
+        box-shadow: 0 0 0 transparent;
+        will-change: width, height, margin, opacity, box-shadow, transform, background;
+      `;
+      document.body.appendChild(glowLine);
+
+      setTimeout(() => {
+        canvas.style.filter = 'brightness(1) contrast(1)';
+        screen2.style.filter = 'brightness(1) contrast(1)';
+
+        const curtainTiming = 'height 0.85s cubic-bezier(0.5, 0, 0.65, 0.3)';
+        curtainTopWrap.style.transition = curtainTiming;
+        curtainBottomWrap.style.transition = curtainTiming;
+
+        requestAnimationFrame(() => {
+          curtainTopWrap.style.height = 'calc(50vh - 60px)';
+          curtainBottomWrap.style.height = 'calc(50vh - 60px)';
+        });
+      }, 100);
+
+      setTimeout(() => {
+        glowLine.style.transition = `
+          opacity 0.25s ease,
+          transform 0.25s ease,
+          box-shadow 0.45s ease
+        `;
+        glowLine.style.opacity = '1';
+        glowLine.style.transform = 'scaleY(1)';
+        glowLine.style.boxShadow = `
+          0 0 6px rgba(255, 255, 255, 1),
+          0 0 18px rgba(230, 240, 255, 0.9),
+          0 0 45px rgba(200, 220, 255, 0.65),
+          0 0 100px rgba(170, 200, 255, 0.4),
+          0 -4px 14px rgba(150, 190, 255, 0.4),
+          0 4px 14px rgba(150, 190, 255, 0.4)
+        `;
+      }, 1050);
+
+      setTimeout(() => {
+        glowLine.style.transition = 'box-shadow 0.25s ease';
+        glowLine.style.boxShadow = `
+          0 0 5px rgba(255, 255, 255, 1),
+          0 0 15px rgba(230, 240, 255, 0.9),
+          0 0 40px rgba(200, 220, 255, 0.65),
+          0 0 90px rgba(170, 200, 255, 0.4)
+        `;
+      }, 1300);
+
+      setTimeout(() => {
+        glowLine.style.transition = `
+          width 0.22s cubic-bezier(0.6, 0, 0.75, 0.4),
+          height 0.22s cubic-bezier(0.6, 0, 0.75, 0.4),
+          margin-left 0.22s cubic-bezier(0.6, 0, 0.75, 0.4),
+          margin-top 0.22s cubic-bezier(0.6, 0, 0.75, 0.4),
+          border-radius 0.22s ease,
+          background 0.22s ease,
+          box-shadow 0.22s ease
+        `;
+        glowLine.style.width = '12px';
+        glowLine.style.height = '12px';
+        glowLine.style.marginLeft = '-6px';
+        glowLine.style.marginTop = '-6px';
+        glowLine.style.borderRadius = '50%';
+        glowLine.style.filter = 'blur(0px)';
+        glowLine.style.background = 'radial-gradient(circle at center, #ffffff 0%, #ffffff 70%, rgba(230, 240, 255, 0.9) 85%, rgba(200, 220, 255, 0) 100%)';
+        glowLine.style.boxShadow = `
+          0 0 15px rgba(255, 255, 255, 1),
+          0 0 40px rgba(240, 245, 255, 0.9),
+          0 0 90px rgba(210, 225, 255, 0.6),
+          0 0 160px rgba(180, 205, 255, 0.35)
+        `;
+      }, 1450);
+
+      setTimeout(() => {
+        glowLine.style.transition = 'transform 0.22s ease, box-shadow 0.22s ease';
+        glowLine.style.transform = 'scale(1.5)';
+        glowLine.style.boxShadow = `
+          0 0 25px rgba(255, 255, 255, 1),
+          0 0 65px rgba(240, 245, 255, 0.95),
+          0 0 130px rgba(210, 225, 255, 0.65),
+          0 0 220px rgba(180, 205, 255, 0.4)
+        `;
+      }, 1750);
+
+      setTimeout(() => {
+        glowLine.style.transition = `
+          opacity 0.9s cubic-bezier(0.4, 0, 0.6, 1),
+          transform 0.9s ease,
+          box-shadow 0.9s ease,
+          filter 0.9s ease
+        `;
+        glowLine.style.opacity = '0';
+        glowLine.style.transform = 'scale(0.1)';
+        glowLine.style.filter = 'blur(2.5px)';
+        glowLine.style.boxShadow = '0 0 0 transparent';
+      }, 2150);
+
+      setTimeout(() => {
+        glitchLevel = 0;
+        applyGlitchIntensity();
+
+        const blackout = document.createElement('div');
+        blackout.style.cssText = `
+          position: fixed; inset: 0;
+          background: #000;
+          z-index: 9999999;
+          opacity: 0;
+          transition: opacity 0.8s ease;
+          pointer-events: auto;
+        `;
+        document.body.appendChild(blackout);
+        requestAnimationFrame(() => { blackout.style.opacity = '1'; });
+
+        if (audioCtx && audioCtx.state === 'running') {
+          setTimeout(() => { try { audioCtx.close(); } catch (e) {} }, 800);
+        }
+
+        setTimeout(() => {
+          window.location.href = 'clock.html';
+        }, 1200);
+      }, 3000);
+    }
+
+    // ===================================================================
+    // CLICK DI SCREEN2
+    // ===================================================================
+    screen2.addEventListener('click', () => {
+      registerClick();
+
+      if (awaitingChoice) return;
+      if (finalPhase) { escalateGlitch(); return; }
+      if (state !== 'idle') return;
+      if (phraseIndex > phrases.length) return;
+
+      if (mode === 'delete') {
+        deleteText(() => {
+          mode = 'type';
+          setCursorReady(true);
+        });
+      } else {
+        if (phraseIndex >= phrases.length) return;
+        const idx = phraseIndex;
+        const nextText = phrases[idx];
+        const isChoice = (idx === CHOICE_INDEX);
+        phraseIndex++;
+
+        updateTextStyle(idx);
+
+        typeText(nextText, () => {
+          if (isChoice) {
+            awaitingChoice = true;
+            typeCursor.classList.add('hidden');
+            setTimeout(() => choiceButtons.classList.add('visible'), 350);
+          } else {
+            mode = 'delete';
+            setCursorReady(true);
+          }
+        });
+      }
+    });
+
+    // ===================================================================
+    // TOMBOL AGAIN / NEVER
+    // ===================================================================
+    function handleChoice(choice) {
+      if (!awaitingChoice) return;
+      awaitingChoice = false;
+      choiceButtons.classList.remove('visible');
+
+      if (choice === 'again') {
+        deleteText(() => {
+          setTimeout(() => {
+            phraseIndex = 0;
+            updateTextStyle(0);
+            typeText(phrases[0], () => {
+              phraseIndex = 1;
+              mode = 'delete';
+              setCursorReady(true);
+            });
+          }, 300);
+        });
+      } else if (choice === 'never') {
+        deleteText(() => {
+          setTimeout(() => {
+            updateTextStyle(-1);
+            typeText(FINAL_TEXT, () => {
+              finalPhase = true;
+              finalPhaseActive();
+            });
+          }, 300);
+        });
+      }
+    }
+
+    function finalPhaseActive() {
+      glitchLevel = 0;
+      applyGlitchIntensity();
+      typeCursor.classList.add('hidden');
+    }
+
+    btnAgain.addEventListener('click', (e) => { e.stopPropagation(); handleChoice('again'); });
+    btnNever.addEventListener('click', (e) => { e.stopPropagation(); handleChoice('never'); });
+
+    // ===================================================================
+    // ENTER → MULAI (akses: "pi" atau "π")
+    // ===================================================================
+    inputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !transitioned) {
+        const value = inputEl.value.trim().toLowerCase();
+        if (value === 'pi' || value === 'π') {
+          transitioned = true;
+          playSuccessSound();
+          errorEl.classList.remove('visible');
+          inputEl.blur();
+
+          hintBtn.classList.add('hidden');
+          if (hintTimeout) { clearTimeout(hintTimeout); hintTimeout = null; }
+          hintOverlay.classList.remove('visible');
+
+          screen1.classList.add('hidden');
+          screen2.classList.add('active');
+          setTimeout(() => {
+            typeText(INTRO_TEXT, () => { mode = 'delete'; });
+          }, 900);
+        } else {
+          triggerGlitch();
+        }
+      }
+    });
+
+    // ===================================================================
+    // INIT
+    // ===================================================================
+    window.addEventListener('load', () => inputEl.focus());
+    initStars();
+    animate();
+  </script>
+</body>
+</html>
