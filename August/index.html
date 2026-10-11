@@ -215,7 +215,7 @@
   </div>
 </main>
 
-<audio id="audio" src="August.mp3" preload="metadata"></audio>
+<audio id="audio" src="August.m4a" preload="metadata"></audio>
 
 <script>
 /* =========================================================
@@ -227,7 +227,6 @@ let W, H;
 
 const DPR = Math.min(window.devicePixelRatio || 1, 2);
 
-// deterministic random so tree layout is consistent
 let seed = 99321;
 function rand() {
   seed = (seed * 9301 + 49297) % 233280;
@@ -239,7 +238,6 @@ function drawPine(cx, baseY, height, halfWidth, color) {
   ctx.beginPath();
   ctx.moveTo(cx, baseY - height);
   const segs = 16;
-  // right edge going down (jagged)
   for (let i = 1; i <= segs; i++) {
     const t = i / segs;
     const y = baseY - height + t * height;
@@ -248,7 +246,6 @@ function drawPine(cx, baseY, height, halfWidth, color) {
   }
   ctx.lineTo(cx + halfWidth * 0.12, baseY);
   ctx.lineTo(cx - halfWidth * 0.12, baseY);
-  // left edge going up
   for (let i = segs; i >= 1; i--) {
     const t = i / segs;
     const y = baseY - height + t * height;
@@ -270,9 +267,8 @@ function drawFogPatch(x, y, r, alpha) {
 }
 
 function drawForest() {
-  seed = 99321; // reset for consistent layout
+  seed = 99321;
 
-  // --- sky ---
   const sky = ctx.createLinearGradient(0, 0, 0, H);
   sky.addColorStop(0,    '#0b131e');
   sky.addColorStop(0.55, '#111a27');
@@ -280,7 +276,6 @@ function drawForest() {
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, W, H);
 
-  // --- soft light from above (god ray hint) ---
   const beam = ctx.createRadialGradient(W * 0.5, -H * 0.15, 0, W * 0.5, -H * 0.15, H * 0.9);
   beam.addColorStop(0,   'rgba(160, 190, 230, 0.22)');
   beam.addColorStop(0.5, 'rgba(130, 160, 200, 0.06)');
@@ -288,7 +283,6 @@ function drawForest() {
   ctx.fillStyle = beam;
   ctx.fillRect(0, 0, W, H);
 
-  // --- Layer 1: far pines ---
   for (let i = 0; i < 20; i++) {
     const x  = (i / 20 + (rand() - 0.5) * 0.07) * W;
     const h  = H * (0.32 + rand() * 0.12);
@@ -296,13 +290,11 @@ function drawForest() {
     const by = H * (0.72 + rand() * 0.06);
     drawPine(x, by, h, w, 'rgba(48, 58, 76, 0.85)');
   }
-  // fog between layers
   for (let i = 0; i < 16; i++) {
     drawFogPatch(rand() * W, H * (0.58 + rand() * 0.30),
                  H * (0.20 + rand() * 0.22), 0.14);
   }
 
-  // --- Layer 2: mid pines ---
   for (let i = 0; i < 14; i++) {
     const x  = (i / 14 + (rand() - 0.5) * 0.08) * W;
     const h  = H * (0.48 + rand() * 0.16);
@@ -315,7 +307,6 @@ function drawForest() {
                  H * (0.16 + rand() * 0.22), 0.18);
   }
 
-  // --- Layer 3: near pines (near black) ---
   for (let i = 0; i < 8; i++) {
     const x  = (i / 8 + (rand() - 0.5) * 0.10) * W;
     const h  = H * (0.72 + rand() * 0.24);
@@ -324,7 +315,6 @@ function drawForest() {
     drawPine(x, by, h, w, 'rgba(4, 6, 11, 1)');
   }
 
-  // --- ground mist at bottom ---
   const mist = ctx.createLinearGradient(0, H * 0.72, 0, H);
   mist.addColorStop(0,   'rgba(180, 195, 215, 0)');
   mist.addColorStop(0.75,'rgba(180, 195, 215, 0.15)');
@@ -413,16 +403,13 @@ function syncLyrics() {
   }
   if (idx === activeIndex) return;
 
-  // clear old active
   if (activeIndex >= 0 && lines[activeIndex]) {
     lines[activeIndex].el.classList.remove('active');
     lines[activeIndex].el.classList.add('past');
   }
-  // reset future lines
   for (let i = idx + 1; i < lines.length; i++) {
     lines[i].el.classList.remove('active', 'past');
   }
-  // set new active
   if (idx >= 0) {
     lines[idx].el.classList.remove('past');
     lines[idx].el.classList.add('active');
@@ -438,7 +425,6 @@ function fmt(s) {
   return m + ':' + sec;
 }
 
-/* ---------- events ---------- */
 audio.addEventListener('timeupdate', () => {
   syncLyrics();
   if (audio.duration) {
@@ -463,7 +449,6 @@ progress.addEventListener('click', e => {
   if (audio.duration) audio.currentTime = pct * audio.duration;
 });
 
-/* ---------- load LRC ---------- */
 function loadLRC() {
   fetch('August.lrc', { cache: 'no-store' })
     .then(r => {
@@ -481,7 +466,6 @@ function loadLRC() {
 }
 loadLRC();
 
-/* fallback: user pilih file manual */
 document.getElementById('lrcInput').addEventListener('change', e => {
   const f = e.target.files[0];
   if (!f) return;
