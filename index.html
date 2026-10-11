@@ -566,32 +566,124 @@ I begin with three, yet I never reach an end.</div>
     osc.start(now); osc.stop(now + 0.05);
   }
 
+  // Kurva distorsi (hard clipping)
+  function makeDistortionCurve(amount) {
+    const k = typeof amount === 'number' ? amount : 50;
+    const n = 44100;
+    const curve = new Float32Array(n);
+    const deg = Math.PI / 180;
+    for (let i = 0; i < n; ++i) {
+      const x = (i * 2) / n - 1;
+      curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
+    }
+    return curve;
+  }
+
+  // Sound glitch distorsi per klik
   function playEscalatingGlitchSound(level) {
     if (!audioCtx) return;
     const now = audioCtx.currentTime;
     const intensity = level / MAX_GLITCH_LEVEL;
-    const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
-    osc.type = 'sawtooth';
-    const startFreq = 200 + intensity * 900;
-    const endFreq = 40 + Math.random() * 60;
-    osc.frequency.setValueAtTime(startFreq, now);
-    osc.frequency.linearRampToValueAtTime(endFreq, now + 0.35);
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.linearRampToValueAtTime(0.12 + intensity * 0.22, now + 0.02);
-    gain.gain.linearRampToValueAtTime(0.0001, now + 0.3 + intensity * 0.35);
-    osc.connect(gain); gain.connect(audioCtx.destination);
-    osc.start(now); osc.stop(now + 0.35 + intensity * 0.4);
 
-    if (intensity > 0.4) {
-      const osc2 = audioCtx.createOscillator(), gain2 = audioCtx.createGain();
-      osc2.type = 'square';
-      osc2.frequency.setValueAtTime(1800 + Math.random() * 1400, now);
-      gain2.gain.setValueAtTime(0.0001, now);
-      gain2.gain.linearRampToValueAtTime(0.03 + intensity * 0.04, now + 0.01);
-      gain2.gain.linearRampToValueAtTime(0.0001, now + 0.15 + intensity * 0.15);
-      osc2.connect(gain2); gain2.connect(audioCtx.destination);
-      osc2.start(now); osc2.stop(now + 0.2 + intensity * 0.2);
-    }
+    const bufferSize = Math.floor(audioCtx.sampleRate * 0.35);
+    const noiseBuf = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = noiseBuf.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    const noiseSrc = audioCtx.createBufferSource();
+    noiseSrc.buffer = noiseBuf;
+
+    const dist = audioCtx.createWaveShaper();
+    dist.curve = makeDistortionCurve(200 + intensity * 900);
+    dist.oversample = '4x';
+
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(300 + Math.random() * 1200 + intensity * 2000, now);
+    filter.Q.setValueAtTime(2 + intensity * 5, now);
+
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(0.08 + intensity * 0.22, now + 0.015);
+    gain.gain.linearRampToValueAtTime(0.0001, now + 0.25 + intensity * 0.25);
+
+    noiseSrc.connect(dist);
+    dist.connect(filter);
+    filter.connect(gain);
+    gain.connect(audioCtx.destination);
+    noiseSrc.start(now);
+    noiseSrc.stop(now + 0.32 + intensity * 0.3);
+
+    const osc = audioCtx.createOscillator();
+    const oscGain = audioCtx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(80 + intensity * 400, now);
+    osc.frequency.exponentialRampToValueAtTime(30, now + 0.3);
+    oscGain.gain.setValueAtTime(0.0001, now);
+    oscGain.gain.linearRampToValueAtTime(0.05 + intensity * 0.14, now + 0.02);
+    oscGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.32);
+    osc.connect(oscGain);
+    oscGain.connect(audioCtx.destination);
+    osc.start(now);
+    osc.stop(now + 0.34);
+  }
+
+  // Sound CRT dimatikan
+  function playCrtOffSound() {
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+
+    const bufferSize = Math.floor(audioCtx.sampleRate * 0.15);
+    const noiseBuf = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) d[i] = Math.random() * 2 - 1;
+    const noiseSrc = audioCtx.createBufferSource();
+    noiseSrc.buffer = noiseBuf;
+
+    const dist = audioCtx.createWaveShaper();
+    dist.curve = makeDistortionCurve(600);
+    dist.oversample = '4x';
+
+    const noiseFilter = audioCtx.createBiquadFilter();
+    noiseFilter.type = 'highpass';
+    noiseFilter.frequency.setValueAtTime(600, now);
+
+    const noiseGain = audioCtx.createGain();
+    noiseGain.gain.setValueAtTime(0.0001, now);
+    noiseGain.gain.linearRampToValueAtTime(0.32, now + 0.015);
+    noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
+
+    noiseSrc.connect(dist);
+    dist.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(audioCtx.destination);
+    noiseSrc.start(now);
+    noiseSrc.stop(now + 0.3);
+
+    const osc = audioCtx.createOscillator();
+    const oscGain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(9000, now);
+    osc.frequency.exponentialRampToValueAtTime(110, now + 1.5);
+    oscGain.gain.setValueAtTime(0.0001, now);
+    oscGain.gain.linearRampToValueAtTime(0.12, now + 0.05);
+    oscGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.6);
+    osc.connect(oscGain);
+    oscGain.connect(audioCtx.destination);
+    osc.start(now);
+    osc.stop(now + 1.65);
+
+    const thunk = audioCtx.createOscillator();
+    const thunkGain = audioCtx.createGain();
+    thunk.type = 'triangle';
+    thunk.frequency.setValueAtTime(180, now + 0.85);
+    thunk.frequency.exponentialRampToValueAtTime(38, now + 1.5);
+    thunkGain.gain.setValueAtTime(0.0001, now + 0.85);
+    thunkGain.gain.linearRampToValueAtTime(0.28, now + 0.88);
+    thunkGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.6);
+    thunk.connect(thunkGain);
+    thunkGain.connect(audioCtx.destination);
+    thunk.start(now + 0.85);
+    thunk.stop(now + 1.65);
   }
 
   window.addEventListener('click', initAudio);
@@ -914,7 +1006,7 @@ window.addEventListener('resize', () => {
     const phrases = [
       "The clock does not lie.\nIt only speaks a language you have forgotten.",
       "X = √196 - 2³ + 3!/2",
-      "Y = 2x² + √225 - 15",
+      "Y = 2x² + √225 - 10",
       "X : Y\nNot a ratio. Not yet.",
       "One must be reduced.\nThe other must be read as it was written centuries ago.",
       "Again, or never?"
@@ -1089,48 +1181,113 @@ window.addEventListener('resize', () => {
       }
     }
 
+    // ===================================================================
+    // CRT TABUNG DIMATIKAN
+    // ===================================================================
     function triggerFullBlackout() {
       if (blackoutDone) return;
       blackoutDone = true;
       fadingOut = true;
       typeCursor.classList.add('hidden');
 
-      const blackout = document.createElement('div');
-      blackout.style.cssText = `
-        position: fixed; inset: 0;
-        background: #000000;
-        z-index: 9999999;
+      playCrtOffSound();
+
+      // Element garis terang
+      const lineEl = document.createElement('div');
+      lineEl.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        margin-top: -1.5px;
+        background: #ffffff;
+        box-shadow:
+          0 0 20px #ffffff,
+          0 0 60px rgba(210, 230, 255, 0.95),
+          0 0 120px rgba(150, 190, 255, 0.7);
+        z-index: 9999990;
+        transform-origin: center center;
         opacity: 0;
-        transition: opacity 5.5s cubic-bezier(0.45, 0, 0.55, 1);
-        pointer-events: auto;
-        cursor: default;
+        pointer-events: none;
+        will-change: transform, opacity, box-shadow;
       `;
-      document.body.appendChild(blackout);
-      setTimeout(() => { blackout.style.opacity = '1'; }, 400);
+      document.body.appendChild(lineEl);
 
-      const startT = performance.now();
-      const dur = 5600;
-      function decay() {
-        const t = Math.min((performance.now() - startT) / dur, 1);
-        const eased = 1 - Math.pow(t, 1.6);
-        const gi = Math.max(0, eased);
-        screen2Text.style.setProperty('--gi', String(gi));
-        if (gi > 0.001 && fadingOut) requestAnimationFrame(decay);
-        else {
-          screen2Text.classList.remove('glitching');
-          glitchLevel = 0;
-        }
-      }
-      decay();
+      glitchLevel = 0;
 
-      if (audioCtx && audioCtx.state === 'running') {
-        setTimeout(() => { try { audioCtx.close(); } catch (e) {} }, 5600);
-      }
+      canvas.style.transformOrigin = 'center center';
+      screen2.style.transformOrigin = 'center center';
 
-      // ====== REDIRECT KE clock.html setelah fade selesai ======
-      setTimeout(() => {
-        window.location.href = 'clock.html';
-      }, 6200);
+      const collapseEase = 'cubic-bezier(0.55, 0, 0.85, 0.4)';
+      canvas.style.transition = `transform 0.9s ${collapseEase}, filter 0.9s ease, opacity 0.3s ease 0.7s`;
+      screen2.style.transition = `transform 0.9s ${collapseEase}, filter 0.9s ease, opacity 0.3s ease 0.7s`;
+
+      requestAnimationFrame(() => {
+        canvas.style.transform = 'scaleY(0.004)';
+        screen2.style.transform = 'scaleY(0.004)';
+        canvas.style.filter = 'brightness(2.8) contrast(1.5) saturate(0.8)';
+        screen2.style.filter = 'brightness(2.8) contrast(1.5) saturate(0.8)';
+
+        setTimeout(() => {
+          lineEl.style.transition = 'opacity 0.18s ease';
+          lineEl.style.opacity = '1';
+        }, 700);
+
+        setTimeout(() => {
+          canvas.style.opacity = '0';
+          screen2.style.opacity = '0';
+
+          lineEl.style.transition = 'transform 0.55s cubic-bezier(0.5, 0, 0.75, 0), opacity 0.35s ease';
+          lineEl.style.transform = 'scaleX(0.004)';
+
+          setTimeout(() => {
+            lineEl.style.width = '14px';
+            lineEl.style.height = '14px';
+            lineEl.style.marginLeft = '-7px';
+            lineEl.style.marginTop = '-7px';
+            lineEl.style.left = '50%';
+            lineEl.style.borderRadius = '50%';
+            lineEl.style.transform = 'scaleX(1)';
+            lineEl.style.boxShadow = `
+              0 0 40px #ffffff,
+              0 0 100px rgba(210, 230, 255, 1),
+              0 0 180px rgba(150, 190, 255, 0.85)
+            `;
+
+            setTimeout(() => {
+              lineEl.style.transition = 'opacity 1.4s ease, transform 1.4s ease, box-shadow 1.4s ease';
+              lineEl.style.opacity = '0';
+              lineEl.style.transform = 'scale(0.15)';
+              lineEl.style.boxShadow = '0 0 0 #ffffff';
+
+              setTimeout(() => {
+                const blackout = document.createElement('div');
+                blackout.style.cssText = `
+                  position: fixed; inset: 0;
+                  background: #000000;
+                  z-index: 9999999;
+                  opacity: 0;
+                  transition: opacity 1.4s ease;
+                  pointer-events: auto;
+                  cursor: default;
+                `;
+                document.body.appendChild(blackout);
+                requestAnimationFrame(() => { blackout.style.opacity = '1'; });
+
+                if (audioCtx && audioCtx.state === 'running') {
+                  setTimeout(() => { try { audioCtx.close(); } catch (e) {} }, 1400);
+                }
+
+                setTimeout(() => {
+                  window.location.href = 'clock.html';
+                }, 1700);
+
+              }, 900);
+            }, 220);
+          }, 560);
+        }, 900);
+      });
     }
 
     // ===================================================================
