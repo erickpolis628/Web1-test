@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>05:55 - Glitch Clock</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overflow:hidden;background:#000}
+  body{
+    font-family:"Times New Roman",Georgia,serif;
+    -webkit-user-select:none;user-select:none;
+    cursor:crosshair;
+  }
+
+  .stage{
+    position:fixed;inset:0;
+    display:flex;align-items:center;justify-content:center;
+    overflow:hidden;
+  }
+
+  .clock-wrap{
+    position:relative;
+    width:min(78vmin,600px);
+    height:min(78vmin,600px);
+    transform:translateY(-150vh);
+    transform-origin:center center;
+    transition:transform 1.4s cubic-bezier(.16,1,.3,1);
+    touch-action:none;
+    will-change:transform;
+    backface-visibility:hidden;
+  }
+  .clock-wrap.in{transform:translateY(0)}
+
+  .body{
+    position:absolute;inset:0;
+    transform-origin:center center;
+    will-change:transform;
+    backface-visibility:hidden;
+  }
+
+  .clock-svg{
+    position:absolute;inset:0;
+    width:100%;height:100%;
+    display:block;
+    filter: drop-shadow(0 0 12px rgba(255,255,255,.8))
+            drop-shadow(0 0 30px rgba(255,255,255,.4));
+  }
+
+  .roman-layer{
+    position:absolute;inset:0;
+    pointer-events:none;
+  }
+  .num-roman{
+    position:absolute;
+    color:#fff;
+    font-family:"Times New Roman",Georgia,serif;
+    font-size:min(3.7vmin,28.5px);
+    line-height:1;
+    letter-spacing:0.0526em;
+    text-indent:0.0526em;
+    transform:translate(-50%,-50%);
+    white-space:nowrap;
+    user-select:none;
+    -webkit-user-select:none;
+    pointer-events:none;
+    text-shadow:0 0 1px rgba(255,255,255,.4);
+  }
+
+  /* Angka V — posisi 150° (jam 5), user-select: none, bisa di-tap */
+  .v-text{
+    position:absolute;
+    left:69.6875%;
+    top:84.0985%;
+    transform:translate(-50%,-50%);
+    color:#fff;
+    font-family:"Times New Roman",Georgia,serif;
+    font-size:min(3.7vmin,28.5px);
+    line-height:1;
+    letter-spacing:0.0526em;
+    text-indent:0.0526em;
+    white-space:nowrap;
+    user-select:none;
+    -webkit-user-select:none;
+    pointer-events:auto;
+    touch-action:none;
+    cursor:pointer;
+    will-change:transform;
+    text-shadow:
+      0 0 8px #fff,
+      0 0 18px rgba(255,255,255,.9),
+      0 0 40px rgba(255,255,255,.6);
+    z-index:2;
+    transition: text-shadow .35s ease, transform .35s ease;
+  }
+  .v-text:active{
+    text-shadow:
+      0 0 14px #fff,
+      0 0 30px rgba(255,255,255,1),
+      0 0 60px rgba(255,255,255,.85);
+  }
+
+  .clock-wrap.wrong-react{
+    animation: wrongReact .95s cubic-bezier(.36,.07,.19,.97) both;
+  }
+  @keyframes wrongReact{
+    0%   { transform: translateY(0) rotate(0) scale(1); }
+    12%  { transform: translateY(0) translate(-4px,1px) rotate(-.45deg) scale(1.006); }
+    26%  { transform: translateY(0) translate(4px,-1px) rotate(.45deg) scale(1.006); }
+    40%  { transform: translateY(0) translate(-3px,1px) rotate(-.3deg) scale(1.004); }
+    55%  { transform: translateY(0) translate(2.5px,-1px) rotate(.25deg) scale(1.003); }
+    72%  { transform: translateY(0) translate(-1.5px,0) rotate(-.12deg) scale(1.001); }
+    88%  { transform: translateY(0) translate(.8px,0) rotate(.06deg) scale(1.0005); }
+    100% { transform: translateY(0) rotate(0) scale(1); }
+  }
+
+
+  .ring{fill:none;stroke:#fff;stroke-width:2.5}
+  .ring-thin{fill:none;stroke:rgba(255,255,255,.7);stroke-width:1.5}
+  .ring-inner{fill:none;stroke:rgba(255,255,255,.4);stroke-width:1}
+  .tick{stroke:#fff;stroke-linecap:round}
+  .tick-major{stroke-width:3}
+  .tick-minor{stroke-width:1.2}
+
+  .hand{
+    fill:#fff;
+    transform-box:view-box;
+    transform-origin:50% 50%;
+    transition:transform .08s ease-out;
+    filter: drop-shadow(0 0 6px rgba(255,255,255,.9));
+  }
+
+  .hint{
+    position:fixed;left:0;right:0;bottom:16vh;
+    text-align:center;color:#fff;font-size:14px;
+    letter-spacing:.5em;text-indent:.5em;
+    pointer-events:none;
+    animation:hintPulse 2s ease-in-out infinite;
+    font-family:"Arial",sans-serif;text-transform:uppercase;
+    z-index:10;
+  }
+  .hint.hide{animation:none;opacity:0;transition:opacity .6s ease}
+  @keyframes hintPulse{0%,100%{opacity:.2}50%{opacity:.8}}
+
+  .prompt{
+    position:fixed;left:0;right:0;bottom:11vh;
+    text-align:center;color:#fff;
+    font-family:"Times New Roman",Georgia,serif;
+    font-size:clamp(15px,2.6vmin,22px);
+    letter-spacing:.32em;text-indent:.32em;
+    cursor:pointer;opacity:0;
+    transform:translateY(90px);
+    filter: blur(0);
+    transition:opacity .9s ease, transform .9s cubic-bezier(.16,1,.3,1),
+               filter .6s ease, letter-spacing .5s ease, text-shadow .4s ease;
+    pointer-events:none;user-select:none;
+    z-index:10;padding:8px 16px;
+  }
+  .prompt.show{opacity:1;transform:translateY(0);pointer-events:auto;filter:blur(0)}
+  .prompt.hide{
+    opacity:0;transform:translateY(-18px);
+    filter:blur(6px);letter-spacing:.55em;pointer-events:none;
+    transition:opacity .55s ease, transform .55s ease,
+               filter .55s ease, letter-spacing .55s ease;
+  }
+  .prompt:hover{letter-spacing:.42em;text-shadow:0 0 14px #fff, 0 0 30px rgba(255,255,255,.7)}
+  .prompt:active{transform:translateY(2px) scale(.98)}
+
+  .wrong{
+    position:fixed;left:0;right:0;bottom:11vh;
+    text-align:center;color:#ff2233;
+    font-family:"Times New Roman",Georgia,serif;
+    font-size:clamp(15px,2.6vmin,22px);
+    text-indent:.7em;pointer-events:none;padding:8px 16px;
+    z-index:11;opacity:0;
+    transform:translateY(26px) scale(1.08);
+    filter: blur(14px);letter-spacing:.75em;
+    transition:
+      opacity .75s cubic-bezier(.16,1,.3,1),
+      transform .95s cubic-bezier(.16,1,.3,1),
+      filter .8s cubic-bezier(.16,1,.3,1),
+      letter-spacing 1.1s cubic-bezier(.16,1,.3,1);
+    text-shadow:0 0 10px rgba(255,0,0,.9),0 0 24px rgba(255,0,0,.7),0 0 40px rgba(255,0,0,.4);
+  }
+  .wrong.show{
+    opacity:1;transform:translateY(0) scale(1);
+    filter:blur(0);letter-spacing:.32em;
+    animation: wrongBreath 2.2s ease-in-out infinite .6s;
+  }
+  @keyframes wrongBreath{
+    0%,100%{text-shadow:0 0 10px rgba(255,0,0,.9),0 0 24px rgba(255,0,0,.7),0 0 40px rgba(255,0,0,.4)}
+    50%    {text-shadow:0 0 16px rgba(255,50,50,1),0 0 34px rgba(255,0,0,.9),0 0 62px rgba(255,0,0,.65)}
+  }
+
+  #reset{
+    position:fixed;right:24px;bottom:24px;
+    width:40px;height:40px;border-radius:50%;
+    border:1px solid rgba(255,255,255,.3);
+    background:transparent;color:rgba(255,255,255,.5);
+    font-size:18px;line-height:1;
+    display:grid;place-items:center;
+    opacity:0;pointer-events:none;transition:all .5s ease;
+    cursor:pointer;font-family:"Arial",sans-serif;
+    z-index:10000;
+  }
+  #reset.show{opacity:.4;pointer-events:auto}
+  #reset:hover{opacity:1;border-color:#fff;color:#fff}
+
+  .flash{
+    position:fixed;inset:0;pointer-events:none;z-index:9;opacity:0;
+    background:radial-gradient(circle at center,
+      rgba(255,30,30,.35) 0%, rgba(255,0,0,.14) 35%, transparent 70%);
+  }
+  .flash.pulse{animation: redPulse 2s cubic-bezier(.16,1,.3,1)}
+  @keyframes redPulse{
+    0%{opacity:0;transform:scale(1.02)}
+    14%{opacity:1;transform:scale(1)}
+    32%{opacity:.45}
+    48%{opacity:.85}
+    68%{opacity:.35}
+    100%{opacity:0;transform:scale(1.04)}
+  }
+
+  .toast{
+    position:fixed;
+    left:50%;bottom:22vh;
+    transform:translateX(-50%) translateY(20px);
+    background:rgba(20,20,20,.85);
+    color:#fff;
+    padding:11px 22px;
+    border:1px solid rgba(255,255,255,.28);
+    border-radius:6px;
+    font-family:"Times New Roman",Georgia,serif;
+    font-size:15px;
+    letter-spacing:.12em;
+    white-space:nowrap;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .45s ease, transform .45s cubic-bezier(.16,1,.3,1);
+    z-index:10001;
+    backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+    box-shadow:0 0 24px rgba(255,255,255,.1);
+  }
+  .toast.show{
+    opacity:1;
+    transform:translateX(-50%) translateY(0);
+  }
+</style>
+</head>
+<body>
+
+<div class="stage" id="stage">
+  <div class="clock-wrap" id="clockWrap">
+    <div class="body" id="clockBody">
+      <svg class="clock-svg" id="clockSvg" viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg">
+        <circle class="ring" cx="400" cy="400" r="370"/>
+        <circle class="ring-thin" cx="400" cy="400" r="355"/>
+        <circle class="ring-thin" cx="400" cy="400" r="270"/>
+        <circle class="ring-thin" cx="400" cy="400" r="240"/>
+        <g id="tick-marks"></g>
+        <circle class="ring-inner" cx="400" cy="400" r="170"/>
+        <circle class="ring-inner" cx="400" cy="400" r="140"/>
+        <g id="hourHand" class="hand">
+          <path d="M 392,420 L 400,220 L 408,420 Z" />
+        </g>
+        <g id="minuteHand" class="hand">
+          <path d="M 396,430 L 400,90 L 404,430 Z" />
+        </g>
+        <circle cx="400" cy="400" r="10" fill="#fff"/>
+      </svg>
+      <div class="roman-layer" id="romanLayer"></div>
+    </div>
+    <div class="v-text" id="vText">V</div>
+  </div>
+</div>
+
+<div class="hint" id="hint">Touch to start</div>
+<div class="prompt" id="prompt">Is This the Time You Seek</div>
+<div class="wrong"  id="wrong">Wrong Time. Wrong Existence.</div>
+<div class="flash"  id="flash"></div>
+<div class="toast"  id="toast">Copied: Hi! Happy Birthday!</div>
+<button id="reset" title="Ulangi">&#8635;</button>
+
+
+<script>
+(function(){
+  'use strict';
+
+  const clockWrap  = document.getElementById('clockWrap');
+  const clockBody  = document.getElementById('clockBody');
+  const clockSvg   = document.getElementById('clockSvg');
+  const stage      = document.getElementById('stage');
+  const hint       = document.getElementById('hint');
+  const prompt     = document.getElementById('prompt');
+  const wrongMsg   = document.getElementById('wrong');
+  const flash      = document.getElementById('flash');
+  const resetBtn   = document.getElementById('reset');
+  const toast      = document.getElementById('toast');
+  const hourHand   = document.getElementById('hourHand');
+  const minuteHand = document.getElementById('minuteHand');
+  const tickG      = document.getElementById('tick-marks');
+  const romanLayer = document.getElementById('romanLayer');
+  const vText      = document.getElementById('vText');
+
+  const NS = 'http://www.w3.org/2000/svg';
+  const CX = 400, CY = 400;
+
+  let actx = null, masterGain = null, tickTimer = null;
+
+  function initAudio(){
+    if (actx) return;
+    try {
+      actx = new (window.AudioContext || window.webkitAudioContext)();
+      masterGain = actx.createGain();
+      masterGain.gain.value = 0.55;
+      masterGain.connect(actx.destination);
+    } catch(e){ console.warn('Web Audio tidak didukung:', e); }
+  }
+  function resumeAudio(){
+    if (actx && actx.state === 'suspended') actx.resume();
+  }
+
+  function playTick(isHigh){
+    if (!actx) return;
+    const t = actx.currentTime;
+    const impDur = 0.0025;
+    const impSize = Math.max(32, Math.floor(actx.sampleRate * impDur));
+    const impBuf = actx.createBuffer(1, impSize, actx.sampleRate);
+    const impData = impBuf.getChannelData(0);
+    for (let i = 0; i < impSize; i++){
+      const env = Math.pow(1 - i / impSize, 4);
+      impData[i] = (Math.random() * 2 - 1) * env * 3;
+    }
+    const impulse = actx.createBufferSource();
+    impulse.buffer = impBuf;
+    [
+      { freq: isHigh ? 5200 : 4500, Q: 20, gain: 0.9,  decay: 0.025 },
+      { freq: isHigh ? 1900 : 1650, Q: 13, gain: 0.55, decay: 0.045 },
+      { freq: isHigh ? 230  : 200,  Q: 5,  gain: 0.40, decay: 0.055 }
+    ].forEach(function(r){
+      const bp = actx.createBiquadFilter();
+      bp.type = 'bandpass'; bp.frequency.value = r.freq; bp.Q.value = r.Q;
+      const g = actx.createGain();
+      g.gain.setValueAtTime(r.gain, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + r.decay);
+      impulse.connect(bp); bp.connect(g); g.connect(masterGain);
+    });
+    impulse.start(t); impulse.stop(t + 0.08);
+    const ping = actx.createOscillator();
+    ping.type = 'triangle';
+    ping.frequency.value = isHigh ? 6200 : 5600;
+    const pingG = actx.createGain();
+    pingG.gain.setValueAtTime(0.05, t);
+    pingG.gain.exponentialRampToValueAtTime(0.0001, t + 0.014);
+    ping.connect(pingG); pingG.connect(masterGain);
+    ping.start(t); ping.stop(t + 0.018);
+  }
+
+  let tickHigh = true;
+  function startTickLoop(){
+    stopTickLoop();
+    tickTimer = setInterval(function(){
+      playTick(tickHigh); tickHigh = !tickHigh;
+    }, 1000);
+  }
+  function stopTickLoop(){
+    if (tickTimer){ clearInterval(tickTimer); tickTimer = null; }
+  }
+
+  function playAnomaly(){
+    if (!actx) return;
+    const t = actx.currentTime;
+    const thud = actx.createOscillator();
+    thud.type = 'sine';
+    thud.frequency.setValueAtTime(85, t);
+    thud.frequency.exponentialRampToValueAtTime(32, t + 0.5);
+    const thudG = actx.createGain();
+    thudG.gain.setValueAtTime(0.0001, t);
+    thudG.gain.exponentialRampToValueAtTime(0.40, t + 0.008);
+    thudG.gain.exponentialRampToValueAtTime(0.0001, t + 0.7);
+    thud.connect(thudG); thudG.connect(masterGain);
+    thud.start(t); thud.stop(t + 0.75);
+
+    function darkBell(freq, vol, dur){
+      const osc = actx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t + 0.02);
+      osc.frequency.linearRampToValueAtTime(freq * 0.93, t + dur);
+      const g = actx.createGain();
+      g.gain.setValueAtTime(0.0001, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(vol, t + 0.08);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.02 + dur);
+      osc.connect(g); g.connect(masterGain);
+      osc.start(t + 0.02); osc.stop(t + 0.05 + dur);
+    }
+    darkBell(196.00, 0.16, 1.9);
+    darkBell(277.18, 0.11, 1.9);
+    darkBell(98.00,  0.13, 2.1);
+
+    const ring = actx.createOscillator();
+    ring.type = 'sine'; ring.frequency.value = 1720;
+    const vib = actx.createOscillator();
+    vib.type = 'sine'; vib.frequency.value = 6.2;
+    const vibG = actx.createGain(); vibG.gain.value = 25;
+    vib.connect(vibG); vibG.connect(ring.frequency);
+    const ringG = actx.createGain();
+    ringG.gain.setValueAtTime(0.0001, t + 0.06);
+    ringG.gain.exponentialRampToValueAtTime(0.04, t + 0.2);
+    ringG.gain.exponentialRampToValueAtTime(0.0001, t + 1.9);
+    ring.connect(ringG); ringG.connect(masterGain);
+    ring.start(t + 0.06); ring.stop(t + 2);
+    vib.start(t + 0.06); vib.stop(t + 2);
+
+    const stop = actx.createOscillator();
+    stop.type = 'sawtooth'; stop.frequency.value = 55;
+    const stopF = actx.createBiquadFilter();
+    stopF.type = 'lowpass'; stopF.frequency.value = 180;
+    const stopG = actx.createGain();
+    stopG.gain.setValueAtTime(0.0001, t);
+    stopG.gain.exponentialRampToValueAtTime(0.07, t + 0.35);
+    stopG.gain.setValueAtTime(0.07, t + 1.0);
+    stopG.gain.exponentialRampToValueAtTime(0.0001, t + 1.25);
+    stop.connect(stopF); stopF.connect(stopG); stopG.connect(masterGain);
+    stop.start(t); stop.stop(t + 1.3);
+  }
+
+  function playZoomSound(){
+    if (!actx) return;
+    const t = actx.currentTime;
+    const dur = 4.5;
+
+    const imp = actx.createOscillator();
+    imp.type = 'sine';
+    imp.frequency.setValueAtTime(90, t);
+    imp.frequency.exponentialRampToValueAtTime(28, t + 0.9);
+    const impG = actx.createGain();
+    impG.gain.setValueAtTime(0.0001, t);
+    impG.gain.exponentialRampToValueAtTime(0.5, t + 0.01);
+    impG.gain.exponentialRampToValueAtTime(0.0001, t + 1.0);
+    imp.connect(impG); impG.connect(masterGain);
+    imp.start(t); imp.stop(t + 1.05);
+
+    const sw = actx.createOscillator();
+    sw.type = 'sawtooth';
+    sw.frequency.setValueAtTime(40, t);
+    sw.frequency.exponentialRampToValueAtTime(2200, t + dur * 0.92);
+    const swF = actx.createBiquadFilter();
+    swF.type = 'lowpass';
+    swF.frequency.setValueAtTime(140, t);
+    swF.frequency.exponentialRampToValueAtTime(6000, t + dur * 0.92);
+    swF.Q.value = 5;
+    const swG = actx.createGain();
+    swG.gain.setValueAtTime(0.0001, t);
+    swG.gain.exponentialRampToValueAtTime(0.16, t + 0.8);
+    swG.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    sw.connect(swF); swF.connect(swG); swG.connect(masterGain);
+    sw.start(t); sw.stop(t + dur);
+
+    for (let k = 0; k < 34; k++){
+      const bt = t + 0.5 + Math.random() * dur * 0.8;
+      const bd = 0.02 + Math.random() * 0.05;
+      const b = actx.createOscillator();
+      b.type = 'square';
+      b.frequency.value = 120 + Math.random() * 4000;
+      const bg = actx.createGain();
+      bg.gain.setValueAtTime(0.0001, bt);
+      bg.gain.exponentialRampToValueAtTime(0.04, bt + 0.003);
+      bg.gain.exponentialRampToValueAtTime(0.0001, bt + bd);
+      b.connect(bg); bg.connect(masterGain);
+      b.start(bt); b.stop(bt + bd + 0.01);
+    }
+
+    const chime = actx.createOscillator();
+    chime.type = 'sine'; chime.frequency.value = 1760;
+    const chimeG = actx.createGain();
+    chimeG.gain.setValueAtTime(0.0001, t + dur * 0.9);
+    chimeG.gain.exponentialRampToValueAtTime(0.12, t + dur * 0.93);
+    chimeG.gain.exponentialRampToValueAtTime(0.0001, t + dur + 1.0);
+    chime.connect(chimeG); chimeG.connect(masterGain);
+    chime.start(t + dur * 0.9); chime.stop(t + dur + 1.1);
+  }
+
+
+const R_TICK_OUT = 260, R_TICK_IN_MAJOR = 235, R_TICK_IN_MINOR = 245;
+for (let i = 0; i < 60; i++) {
+  const isMajor = i % 5 === 0;
+  const a = i * 6 * Math.PI / 180;
+  const r_in = isMajor ? R_TICK_IN_MAJOR : R_TICK_IN_MINOR;
+  const line = document.createElementNS(NS, 'line');
+  line.setAttribute('x1', (CX + r_in * Math.sin(a)).toFixed(2));
+  line.setAttribute('y1', (CY - r_in * Math.cos(a)).toFixed(2));
+  line.setAttribute('x2', (CX + R_TICK_OUT * Math.sin(a)).toFixed(2));
+  line.setAttribute('y2', (CY - R_TICK_OUT * Math.cos(a)).toFixed(2));
+  line.setAttribute('class', 'tick ' + (isMajor ? 'tick-major' : 'tick-minor'));
+  tickG.appendChild(line);
+}
+
+/* ROMAN: index 5 = 'V' → di-skip dari loop, dipisah ke .v-text */
+const ROMAN = ['XII','I','II','III','IV','V','VI','VII','VIII','IX','X','XI'];
+const R_NORM_PCT = 39.375;
+const CORRECT_INDEX = 5;
+
+ROMAN.forEach(function(txt, i){
+  if (i === CORRECT_INDEX) return;
+  const a = i * 30 * Math.PI / 180;
+  const xPct = 50 + Math.sin(a) * R_NORM_PCT;
+  const yPct = 50 - Math.cos(a) * R_NORM_PCT;
+  const el = document.createElement('div');
+  el.className = 'num-roman';
+  el.textContent = txt;
+  el.style.left = xPct + '%';
+  el.style.top  = yPct + '%';
+  romanLayer.appendChild(el);
+});
+
+let hourAngle   = 300;   // start: jam 10
+let minuteAngle = 60;    // start: menit 10
+let dragging    = null;
+let introDone   = false;
+let ready       = false;
+let glitched    = false;
+let wrongBusy   = false;
+let wrongTimer  = null;
+
+function render(){
+  hourHand.style.transform   = 'rotate(' + hourAngle + 'deg)';
+  minuteHand.style.transform = 'rotate(' + minuteAngle + 'deg)';
+}
+render();
+
+function startIntro(){
+  if (introDone) return;
+  introDone = true;
+  initAudio();
+  resumeAudio();
+
+  hint.classList.add('hide');
+  void clockWrap.getBoundingClientRect();
+  clockWrap.classList.add('in');
+  playAnomaly();
+
+  setTimeout(function(){
+    ready = true;
+    prompt.classList.add('show');
+    startTickLoop();
+  }, 1300);
+}
+document.addEventListener('pointerdown', startIntro, { once:true });
+
+function polar(e){
+  const r  = clockSvg.getBoundingClientRect();
+  const cx = r.left + r.width  / 2;
+  const cy = r.top  + r.height / 2;
+  const dx = e.clientX - cx, dy = e.clientY - cy;
+  let ang = Math.atan2(dx, -dy) * 180 / Math.PI;
+  if (ang < 0) ang += 360;
+  return { ang, dist: Math.hypot(dx, dy) };
+}
+function angDiff(a, b){
+  const d = Math.abs(a - b) % 360;
+  return d > 180 ? 360 - d : d;
+}
+
+clockWrap.addEventListener('pointerdown', function(e){
+  if (vText.contains(e.target)) return;
+  if (!ready || glitched) return;
+  resumeAudio();
+  const p = polar(e);
+  if (p.dist < 20) return;
+  const dh = angDiff(p.ang, hourAngle);
+  const dm = angDiff(p.ang, minuteAngle);
+  dragging = (dh <= dm) ? 'hour' : 'minute';
+  if (clockWrap.setPointerCapture) {
+    try { clockWrap.setPointerCapture(e.pointerId); } catch(err){}
+  }
+  e.preventDefault();
+  move(e);
+});
+
+window.addEventListener('pointermove', function(e){
+  if (!dragging) return;
+  e.preventDefault();
+  move(e);
+}, { passive:false });
+
+window.addEventListener('pointerup',     function(){ dragging = null; });
+window.addEventListener('pointercancel', function(){ dragging = null; });
+
+function move(e){
+  if (!dragging || glitched) return;
+  const ang = polar(e).ang;
+  if (dragging === 'hour') hourAngle = (Math.round(ang/30)*30) % 360;
+  else                     minuteAngle = (Math.round(ang/6)*6) % 360;
+  render();
+}
+
+/* ---------- Copy handler ---------- */
+let toastTimer = null;
+function showToast(msg){
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){
+    toast.classList.remove('show');
+  }, 1800);
+}
+
+function copyPayload(text){
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function(){
+      showToast('Copied: ' + text);
+    }).catch(function(){
+      fallbackCopy(text);
+    });
+  } else {
+    fallbackCopy(text);
+  }
+}
+
+function fallbackCopy(text){
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    ta.style.top = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, text.length);
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast(ok ? 'Copied: ' + text : 'Copy failed');
+  } catch(err){
+    showToast('Copy failed');
+  }
+}
+
+vText.addEventListener('click', function(e){
+  e.stopPropagation();
+  copyPayload('Hi! Happy Birthday!');
+});
+
+vText.addEventListener('pointerdown', function(e){
+  e.stopPropagation();
+});
+
+prompt.addEventListener('pointerdown', function(e){ e.stopPropagation(); });
+
+prompt.addEventListener('click', function(e){
+  e.stopPropagation();
+  if (!ready || glitched || wrongBusy) return;
+  resumeAudio();
+  // 05:55 → jam 5 (150°) + menit 55 (330°)
+  if (hourAngle === 150 && minuteAngle === 330) fireGlitch();
+  else showWrong();
+});
+
+function showWrong(){
+  wrongBusy = true;
+  prompt.classList.add('hide');
+  prompt.classList.remove('show');
+
+  clockWrap.classList.remove('wrong-react');
+  void clockWrap.offsetWidth;
+  clockWrap.classList.add('wrong-react');
+
+  flash.classList.remove('pulse');
+  void flash.offsetWidth;
+  flash.classList.add('pulse');
+
+  playAnomaly();
+
+  setTimeout(function(){
+    wrongMsg.classList.remove('show');
+    void wrongMsg.offsetWidth;
+    wrongMsg.classList.add('show');
+  }, 180);
+
+  clearTimeout(wrongTimer);
+  wrongTimer = setTimeout(function(){
+    wrongMsg.classList.remove('show');
+    setTimeout(function(){
+      prompt.classList.remove('hide');
+      prompt.classList.add('show');
+      setTimeout(function(){
+        clockWrap.classList.remove('wrong-react');
+        wrongBusy = false;
+      }, 400);
+    }, 350);
+  }, 2500);
+}
+
+
+  function fireGlitch(){
+    if (glitched) return;
+    glitched = true;
+    wrongBusy = true;
+    dragging = null;
+    clearTimeout(wrongTimer);
+
+    hint.classList.add('hide');
+    wrongMsg.classList.remove('show');
+    prompt.classList.add('hide');
+    prompt.classList.remove('show');
+    clockWrap.classList.remove('wrong-react');
+
+    setTimeout(stopTickLoop, 400);
+    playZoomSound();
+
+    const vRect = vText.getBoundingClientRect();
+    const vCx = vRect.left + vRect.width  / 2;
+    const vCy = vRect.top  + vRect.height / 2;
+
+    const wrapRect = clockWrap.getBoundingClientRect();
+    const vLocalX = vCx - wrapRect.left;
+    const vLocalY = vCy - wrapRect.top;
+
+    const vcx = window.innerWidth  / 2;
+    const vcy = window.innerHeight / 2;
+
+    const tx = vcx - vCx;
+    const ty = vcy - vCy;
+
+    clockWrap.style.transition = 'none';
+    void clockWrap.offsetWidth;
+    clockWrap.style.transformOrigin = vLocalX + 'px ' + vLocalY + 'px';
+    clockBody.style.transformOrigin = vLocalX + 'px ' + vLocalY + 'px';
+
+    const S1 = 3;
+    const S2 = 55;
+    const DUR1   = 2400;
+    const DUR2   = 2400;
+    const OVERLAP = 500;
+
+    clockWrap.animate(
+      [
+        { transform: 'translate(0, 0) scale(1)' },
+        { transform: 'translate(' + tx + 'px, ' + ty + 'px) scale(' + S1 + ')' }
+      ],
+      {
+        duration: DUR1,
+        easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
+        fill: 'forwards'
+      }
+    );
+
+    setTimeout(function(){
+      clockBody.animate(
+        [
+          { transform: 'scale(1)' },
+          { transform: 'scale(' + S2 + ')' }
+        ],
+        {
+          duration: DUR2,
+          easing: 'cubic-bezier(0.55, 0.085, 0.68, 0.53)',
+          fill: 'forwards'
+        }
+      );
+    }, DUR1 - OVERLAP);
+
+    setTimeout(function(){
+      resetBtn.classList.add('show');
+    }, DUR1 + DUR2 - OVERLAP + 200);
+  }
+
+  resetBtn.addEventListener('click', function(e){
+    e.stopPropagation();
+    resumeAudio();
+
+    clockWrap.getAnimations().forEach(function(a){ a.cancel(); });
+    clockBody.getAnimations().forEach(function(a){ a.cancel(); });
+
+    clockWrap.style.transformOrigin = '';
+    clockBody.style.transformOrigin = '';
+    clockWrap.style.transition = '';
+
+    hourAngle   = 300;
+    minuteAngle = 60;
+    glitched    = false;
+    dragging    = null;
+    wrongBusy   = false;
+    clearTimeout(wrongTimer);
+    render();
+
+    wrongMsg.classList.remove('show');
+    prompt.classList.remove('hide');
+    prompt.classList.add('show');
+    flash.classList.remove('pulse');
+    resetBtn.classList.remove('show');
+
+    startTickLoop();
+  });
+
+  document.addEventListener('contextmenu', function(e){
+    if (clockWrap.contains(e.target)) e.preventDefault();
+  });
+  document.addEventListener('gesturestart', function(e){ e.preventDefault(); });
+
+})();
+</script>
+</body>
+</html>
