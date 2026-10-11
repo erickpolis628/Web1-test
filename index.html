@@ -7,7 +7,6 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;600&display=swap');
 
-    /* ============ ANTI-COPY ============ */
     *, *::before, *::after {
       -webkit-user-select: none !important;
       -moz-user-select: none !important;
@@ -52,7 +51,6 @@
       letter-spacing: 0.1rem; max-width: 320px; line-height: 1.6;
     }
 
-    /* ============ TOMBOL "?" ============ */
     .hint-btn {
       position: fixed;
       top: 26px;
@@ -93,7 +91,6 @@
       transition: opacity 0.6s ease;
     }
 
-    /* ============ OVERLAY HINT ============ */
     .hint-overlay {
       position: fixed;
       inset: 0;
@@ -134,7 +131,6 @@
       100% { opacity: 1;    transform: scale(1.008); }
     }
 
-    /* ============ SCREEN 1 ============ */
     #screen1 {
       position: absolute; top: 0; left: 0;
       width: 100%; height: 100%; z-index: 2;
@@ -189,7 +185,6 @@
     }
     .error-msg.visible { opacity: 1; }
 
-    /* ============ SCREEN 2 ============ */
     #screen2 {
       position: absolute; top: 0; left: 0;
       width: 100%; height: 100%; z-index: 3;
@@ -426,9 +421,6 @@ I begin with three, yet I never reach an end.</div>
   </div>
 
 <script>
-  // ===================================================================
-  // ANTI-COPY
-  // ===================================================================
   (function () {
     document.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); return false; }, true);
     document.addEventListener('selectstart', (e) => { e.preventDefault(); return false; }, true);
@@ -451,9 +443,6 @@ I begin with three, yet I never reach an end.</div>
     }, 200);
   })();
 
-  // ===================================================================
-  // DETEKSI PERANGKAT
-  // ===================================================================
   (function () {
     function checkDesktopLock() {
       const ua = navigator.userAgent || '';
@@ -470,9 +459,6 @@ I begin with three, yet I never reach an end.</div>
     window.addEventListener('pageshow', checkDesktopLock);
   })();
 
-  // ===================================================================
-  // AUDIO
-  // ===================================================================
   let audioCtx = null, isAudioActive = false;
 
   function initAudio() {
@@ -566,7 +552,6 @@ I begin with three, yet I never reach an end.</div>
     osc.start(now); osc.stop(now + 0.05);
   }
 
-  // Kurva distorsi (hard clipping)
   function makeDistortionCurve(amount) {
     const k = typeof amount === 'number' ? amount : 50;
     const n = 44100;
@@ -579,111 +564,146 @@ I begin with three, yet I never reach an end.</div>
     return curve;
   }
 
-  // Sound glitch distorsi per klik
   function playEscalatingGlitchSound(level) {
     if (!audioCtx) return;
     const now = audioCtx.currentTime;
     const intensity = level / MAX_GLITCH_LEVEL;
 
-    const bufferSize = Math.floor(audioCtx.sampleRate * 0.35);
-    const noiseBuf = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-    const data = noiseBuf.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-    const noiseSrc = audioCtx.createBufferSource();
-    noiseSrc.buffer = noiseBuf;
+    const crackleDur = 0.1 + intensity * 0.18;
+    const bufSize = Math.floor(audioCtx.sampleRate * crackleDur);
+    const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) {
+      if (Math.random() < 0.1 + intensity * 0.2) {
+        d[i] = (Math.random() * 2 - 1) * (0.6 + intensity * 0.4);
+      } else {
+        d[i] = (Math.random() * 2 - 1) * 0.18;
+      }
+    }
+    const crackleSrc = audioCtx.createBufferSource();
+    crackleSrc.buffer = buf;
 
     const dist = audioCtx.createWaveShaper();
-    dist.curve = makeDistortionCurve(200 + intensity * 900);
+    dist.curve = makeDistortionCurve(400 + intensity * 700);
     dist.oversample = '4x';
 
-    const filter = audioCtx.createBiquadFilter();
-    filter.type = 'bandpass';
-    filter.frequency.setValueAtTime(300 + Math.random() * 1200 + intensity * 2000, now);
-    filter.Q.setValueAtTime(2 + intensity * 5, now);
+    const crackleFilter = audioCtx.createBiquadFilter();
+    crackleFilter.type = 'highpass';
+    crackleFilter.frequency.setValueAtTime(900 + intensity * 1500, now);
 
-    const gain = audioCtx.createGain();
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.linearRampToValueAtTime(0.08 + intensity * 0.22, now + 0.015);
-    gain.gain.linearRampToValueAtTime(0.0001, now + 0.25 + intensity * 0.25);
+    const crackleGain = audioCtx.createGain();
+    crackleGain.gain.setValueAtTime(0.0001, now);
+    crackleGain.gain.linearRampToValueAtTime(0.1 + intensity * 0.18, now + 0.008);
+    crackleGain.gain.exponentialRampToValueAtTime(0.0001, now + crackleDur);
 
-    noiseSrc.connect(dist);
-    dist.connect(filter);
-    filter.connect(gain);
-    gain.connect(audioCtx.destination);
-    noiseSrc.start(now);
-    noiseSrc.stop(now + 0.32 + intensity * 0.3);
+    crackleSrc.connect(dist);
+    dist.connect(crackleFilter);
+    crackleFilter.connect(crackleGain);
+    crackleGain.connect(audioCtx.destination);
+    crackleSrc.start(now);
+    crackleSrc.stop(now + crackleDur + 0.02);
 
-    const osc = audioCtx.createOscillator();
-    const oscGain = audioCtx.createGain();
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(80 + intensity * 400, now);
-    osc.frequency.exponentialRampToValueAtTime(30, now + 0.3);
-    oscGain.gain.setValueAtTime(0.0001, now);
-    oscGain.gain.linearRampToValueAtTime(0.05 + intensity * 0.14, now + 0.02);
-    oscGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.32);
-    osc.connect(oscGain);
-    oscGain.connect(audioCtx.destination);
-    osc.start(now);
-    osc.stop(now + 0.34);
+    const zap = audioCtx.createOscillator();
+    const zapGain = audioCtx.createGain();
+    zap.type = 'square';
+    const zapStart = 2200 + intensity * 1800;
+    const zapEnd = 180 + intensity * 400;
+    zap.frequency.setValueAtTime(zapStart, now);
+    zap.frequency.exponentialRampToValueAtTime(zapEnd, now + 0.07);
+    zapGain.gain.setValueAtTime(0.0001, now);
+    zapGain.gain.linearRampToValueAtTime(0.045 + intensity * 0.075, now + 0.005);
+    zapGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.1);
+    zap.connect(zapGain);
+    zapGain.connect(audioCtx.destination);
+    zap.start(now);
+    zap.stop(now + 0.12);
+
+    if (intensity > 0.45) {
+      const rumble = audioCtx.createOscillator();
+      const rumbleGain = audioCtx.createGain();
+      rumble.type = 'triangle';
+      rumble.frequency.setValueAtTime(85, now);
+      rumble.frequency.exponentialRampToValueAtTime(32, now + 0.3);
+      rumbleGain.gain.setValueAtTime(0.0001, now);
+      rumbleGain.gain.linearRampToValueAtTime(0.06 + intensity * 0.12, now + 0.02);
+      rumbleGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
+      rumble.connect(rumbleGain);
+      rumbleGain.connect(audioCtx.destination);
+      rumble.start(now);
+      rumble.stop(now + 0.38);
+    }
   }
 
-  // Sound CRT dimatikan
   function playCrtOffSound() {
     if (!audioCtx) return;
     const now = audioCtx.currentTime;
 
-    const bufferSize = Math.floor(audioCtx.sampleRate * 0.15);
-    const noiseBuf = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-    const d = noiseBuf.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) d[i] = Math.random() * 2 - 1;
-    const noiseSrc = audioCtx.createBufferSource();
-    noiseSrc.buffer = noiseBuf;
+    const bufSize = Math.floor(audioCtx.sampleRate * 0.12);
+    const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) {
+      d[i] = (Math.random() < 0.45 ? 1 : 0.25) * (Math.random() * 2 - 1);
+    }
+    const src = audioCtx.createBufferSource();
+    src.buffer = buf;
 
     const dist = audioCtx.createWaveShaper();
-    dist.curve = makeDistortionCurve(600);
+    dist.curve = makeDistortionCurve(500);
     dist.oversample = '4x';
 
-    const noiseFilter = audioCtx.createBiquadFilter();
-    noiseFilter.type = 'highpass';
-    noiseFilter.frequency.setValueAtTime(600, now);
+    const hpf = audioCtx.createBiquadFilter();
+    hpf.type = 'highpass';
+    hpf.frequency.setValueAtTime(1200, now);
 
-    const noiseGain = audioCtx.createGain();
-    noiseGain.gain.setValueAtTime(0.0001, now);
-    noiseGain.gain.linearRampToValueAtTime(0.32, now + 0.015);
-    noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
+    const g = audioCtx.createGain();
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.linearRampToValueAtTime(0.32, now + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
 
-    noiseSrc.connect(dist);
-    dist.connect(noiseFilter);
-    noiseFilter.connect(noiseGain);
-    noiseGain.connect(audioCtx.destination);
-    noiseSrc.start(now);
-    noiseSrc.stop(now + 0.3);
+    src.connect(dist);
+    dist.connect(hpf);
+    hpf.connect(g);
+    g.connect(audioCtx.destination);
+    src.start(now);
+    src.stop(now + 0.25);
 
-    const osc = audioCtx.createOscillator();
-    const oscGain = audioCtx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(9000, now);
-    osc.frequency.exponentialRampToValueAtTime(110, now + 1.5);
-    oscGain.gain.setValueAtTime(0.0001, now);
-    oscGain.gain.linearRampToValueAtTime(0.12, now + 0.05);
-    oscGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.6);
-    osc.connect(oscGain);
-    oscGain.connect(audioCtx.destination);
-    osc.start(now);
-    osc.stop(now + 1.65);
+    const whine = audioCtx.createOscillator();
+    const whineG = audioCtx.createGain();
+    whine.type = 'sine';
+    whine.frequency.setValueAtTime(15500, now);
+    whine.frequency.exponentialRampToValueAtTime(140, now + 1.8);
+    whineG.gain.setValueAtTime(0.0001, now);
+    whineG.gain.linearRampToValueAtTime(0.09, now + 0.04);
+    whineG.gain.exponentialRampToValueAtTime(0.0001, now + 1.9);
+    whine.connect(whineG);
+    whineG.connect(audioCtx.destination);
+    whine.start(now);
+    whine.stop(now + 1.95);
 
     const thunk = audioCtx.createOscillator();
-    const thunkGain = audioCtx.createGain();
+    const thunkG = audioCtx.createGain();
     thunk.type = 'triangle';
-    thunk.frequency.setValueAtTime(180, now + 0.85);
-    thunk.frequency.exponentialRampToValueAtTime(38, now + 1.5);
-    thunkGain.gain.setValueAtTime(0.0001, now + 0.85);
-    thunkGain.gain.linearRampToValueAtTime(0.28, now + 0.88);
-    thunkGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.6);
-    thunk.connect(thunkGain);
-    thunkGain.connect(audioCtx.destination);
+    thunk.frequency.setValueAtTime(220, now + 0.85);
+    thunk.frequency.exponentialRampToValueAtTime(38, now + 1.6);
+    thunkG.gain.setValueAtTime(0.0001, now + 0.85);
+    thunkG.gain.linearRampToValueAtTime(0.34, now + 0.9);
+    thunkG.gain.exponentialRampToValueAtTime(0.0001, now + 1.7);
+    thunk.connect(thunkG);
+    thunkG.connect(audioCtx.destination);
     thunk.start(now + 0.85);
-    thunk.stop(now + 1.65);
+    thunk.stop(now + 1.75);
+
+    const click = audioCtx.createOscillator();
+    const clickG = audioCtx.createGain();
+    click.type = 'square';
+    click.frequency.setValueAtTime(70, now + 2.4);
+    clickG.gain.setValueAtTime(0.0001, now + 2.4);
+    clickG.gain.linearRampToValueAtTime(0.15, now + 2.42);
+    clickG.gain.exponentialRampToValueAtTime(0.0001, now + 2.5);
+    click.connect(clickG);
+    clickG.connect(audioCtx.destination);
+    click.start(now + 2.4);
+    click.stop(now + 2.55);
   }
 
   window.addEventListener('click', initAudio);
@@ -691,9 +711,6 @@ I begin with three, yet I never reach an end.</div>
   window.addEventListener('touchstart', initAudio);
   window.addEventListener('mousemove', initAudio, { once: true });
 
-  // ===================================================================
-  // CANVAS STARFIELD
-  // ===================================================================
   const canvas = document.getElementById('space-canvas');
   const ctx = canvas.getContext('2d');
   let width = canvas.width = window.innerWidth;
@@ -880,9 +897,6 @@ function animate() {
 initStars();
 animate();
 
-// ===================================================================
-// DOM REFS
-// ===================================================================
 const inputEl = document.getElementById('codeInput');
 const displayText = document.getElementById('displayText');
 const errorEl = document.getElementById('errorMsg');
@@ -932,9 +946,6 @@ function triggerGlitch() {
   setTimeout(() => errorEl.classList.remove('visible'), 1800);
 }
 
-// ===================================================================
-// TOMBOL "?" — HINT
-// ===================================================================
 let hintTimeout = null;
 
 hintBtn.addEventListener('click', (e) => {
@@ -953,9 +964,6 @@ hintOverlay.addEventListener('click', () => {
   hintTimeout = null;
 });
 
-// ===================================================================
-// AUTO-FIT FONT SIZE
-// ===================================================================
 const measureCanvas = document.createElement('canvas');
 const measureCtx = measureCanvas.getContext('2d');
 
@@ -1000,9 +1008,6 @@ window.addEventListener('resize', () => {
   if (currentTargetText) fitTextSize(currentTargetText);
 });
 
-    // ===================================================================
-    // STATE MACHINE
-    // ===================================================================
     const phrases = [
       "The clock does not lie.\nIt only speaks a language you have forgotten.",
       "X = √196 - 2³ + 3!/2",
@@ -1023,9 +1028,6 @@ window.addEventListener('resize', () => {
     let transitioned = false;
     let awaitingChoice = false;
 
-    // ===================================================================
-    // SPAM TRACKER
-    // ===================================================================
     const clickTimes = [];
     function registerClick() {
       const now = performance.now();
@@ -1051,9 +1053,6 @@ window.addEventListener('resize', () => {
       }
     }
 
-    // ===================================================================
-    // TYPING
-    // ===================================================================
     let currentWord = null;
 
     function typeText(text, onDone) {
@@ -1113,9 +1112,6 @@ window.addEventListener('resize', () => {
       setTimeout(step, 300);
     }
 
-    // ===================================================================
-    // DELETING — SUPER CEPAT
-    // ===================================================================
     function deleteText(onDone) {
       state = 'deleting';
       setCursorReady(false);
@@ -1181,9 +1177,6 @@ window.addEventListener('resize', () => {
       }
     }
 
-    // ===================================================================
-    // CRT TABUNG DIMATIKAN
-    // ===================================================================
     function triggerFullBlackout() {
       if (blackoutDone) return;
       blackoutDone = true;
@@ -1192,107 +1185,189 @@ window.addEventListener('resize', () => {
 
       playCrtOffSound();
 
-      // Element garis terang
-      const lineEl = document.createElement('div');
-      lineEl.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 0;
-        width: 100%;
-        height: 3px;
-        margin-top: -1.5px;
-        background: #ffffff;
-        box-shadow:
-          0 0 20px #ffffff,
-          0 0 60px rgba(210, 230, 255, 0.95),
-          0 0 120px rgba(150, 190, 255, 0.7);
-        z-index: 9999990;
-        transform-origin: center center;
-        opacity: 0;
-        pointer-events: none;
-        will-change: transform, opacity, box-shadow;
-      `;
-      document.body.appendChild(lineEl);
-
       glitchLevel = 0;
 
       canvas.style.transformOrigin = 'center center';
       screen2.style.transformOrigin = 'center center';
 
-      const collapseEase = 'cubic-bezier(0.55, 0, 0.85, 0.4)';
-      canvas.style.transition = `transform 0.9s ${collapseEase}, filter 0.9s ease, opacity 0.3s ease 0.7s`;
-      screen2.style.transition = `transform 0.9s ${collapseEase}, filter 0.9s ease, opacity 0.3s ease 0.7s`;
+      const flash = document.createElement('div');
+      flash.style.cssText = `
+        position: fixed; inset: 0;
+        background: radial-gradient(circle at center,
+          rgba(255,255,255,0.85) 0%,
+          rgba(210,225,255,0.45) 35%,
+          transparent 75%);
+        z-index: 9999985;
+        opacity: 0;
+        pointer-events: none;
+        mix-blend-mode: screen;
+      `;
+      document.body.appendChild(flash);
 
       requestAnimationFrame(() => {
-        canvas.style.transform = 'scaleY(0.004)';
-        screen2.style.transform = 'scaleY(0.004)';
-        canvas.style.filter = 'brightness(2.8) contrast(1.5) saturate(0.8)';
-        screen2.style.filter = 'brightness(2.8) contrast(1.5) saturate(0.8)';
+        flash.style.transition = 'opacity 0.12s ease';
+        flash.style.opacity = '1';
+        setTimeout(() => {
+          flash.style.transition = 'opacity 0.5s ease';
+          flash.style.opacity = '0';
+        }, 110);
+      });
+
+      const bands = document.createElement('div');
+      bands.style.cssText = `
+        position: fixed; inset: 0;
+        z-index: 9999986;
+        pointer-events: none;
+        opacity: 0;
+        background:
+          repeating-linear-gradient(
+            to bottom,
+            rgba(255,255,255,0.1) 0px,
+            rgba(255,255,255,0.1) 2px,
+            transparent 2px,
+            transparent 5px
+          );
+        mix-blend-mode: screen;
+      `;
+      document.body.appendChild(bands);
+
+      requestAnimationFrame(() => { bands.style.opacity = '1'; });
+
+      let flickerCount = 0;
+      const flickerInt = setInterval(() => {
+        bands.style.opacity = Math.random() < 0.5 ? '0' : '1';
+        flickerCount++;
+        if (flickerCount > 20) clearInterval(flickerInt);
+      }, 45);
+
+      const collapseEase = 'cubic-bezier(0.5, 0, 0.85, 0.35)';
+      canvas.style.transition = `transform 1.05s ${collapseEase}, filter 1.05s ease, opacity 0.3s ease 0.85s`;
+      screen2.style.transition = `transform 1.05s ${collapseEase}, filter 1.05s ease, opacity 0.3s ease 0.85s`;
+
+      requestAnimationFrame(() => {
+        canvas.style.transform = 'scaleY(0.005) scaleX(1.02)';
+        screen2.style.transform = 'scaleY(0.005) scaleX(1.02)';
+        canvas.style.filter = 'brightness(3.4) contrast(1.7) saturate(0.45) hue-rotate(-12deg)';
+        screen2.style.filter = 'brightness(3.4) contrast(1.7) saturate(0.45) hue-rotate(-12deg)';
+
+        const lineEl = document.createElement('div');
+        lineEl.style.cssText = `
+          position: fixed;
+          top: 50%;
+          left: 0;
+          width: 100%;
+          height: 4px;
+          margin-top: -2px;
+          background: #ffffff;
+          box-shadow:
+            0 0 8px #ffffff,
+            0 0 25px rgba(230,240,255,1),
+            0 0 70px rgba(180,210,255,0.95),
+            0 0 150px rgba(140,180,255,0.6),
+            0 -8px 20px rgba(100,150,255,0.45),
+            0 8px 20px rgba(100,150,255,0.45);
+          z-index: 9999988;
+          transform-origin: center center;
+          opacity: 0;
+          pointer-events: none;
+          will-change: transform, opacity, box-shadow, height;
+        `;
+        document.body.appendChild(lineEl);
 
         setTimeout(() => {
-          lineEl.style.transition = 'opacity 0.18s ease';
+          bands.style.opacity = '0';
+          clearInterval(flickerInt);
+
+          lineEl.style.transition = 'opacity 0.2s ease';
           lineEl.style.opacity = '1';
-        }, 700);
 
-        setTimeout(() => {
-          canvas.style.opacity = '0';
-          screen2.style.opacity = '0';
-
-          lineEl.style.transition = 'transform 0.55s cubic-bezier(0.5, 0, 0.75, 0), opacity 0.35s ease';
-          lineEl.style.transform = 'scaleX(0.004)';
+          let lf = 0;
+          const lineFlicker = setInterval(() => {
+            lineEl.style.opacity = Math.random() < 0.7 ? '1' : '0.25';
+            lf++;
+            if (lf > 6) {
+              clearInterval(lineFlicker);
+              lineEl.style.opacity = '1';
+            }
+          }, 55);
 
           setTimeout(() => {
-            lineEl.style.width = '14px';
-            lineEl.style.height = '14px';
-            lineEl.style.marginLeft = '-7px';
-            lineEl.style.marginTop = '-7px';
-            lineEl.style.left = '50%';
-            lineEl.style.borderRadius = '50%';
-            lineEl.style.transform = 'scaleX(1)';
+            canvas.style.opacity = '0';
+            screen2.style.opacity = '0';
+
+            lineEl.style.transition = 'transform 0.65s cubic-bezier(0.45, 0, 0.7, 0), height 0.65s ease, box-shadow 0.65s ease, margin-top 0.65s ease';
+            lineEl.style.transform = 'scaleX(0.004)';
+            lineEl.style.height = '10px';
+            lineEl.style.marginTop = '-5px';
             lineEl.style.boxShadow = `
-              0 0 40px #ffffff,
-              0 0 100px rgba(210, 230, 255, 1),
-              0 0 180px rgba(150, 190, 255, 0.85)
+              0 0 15px #ffffff,
+              0 0 55px rgba(230,240,255,1),
+              0 0 130px rgba(180,210,255,0.95),
+              0 0 260px rgba(140,180,255,0.5)
             `;
 
             setTimeout(() => {
-              lineEl.style.transition = 'opacity 1.4s ease, transform 1.4s ease, box-shadow 1.4s ease';
-              lineEl.style.opacity = '0';
-              lineEl.style.transform = 'scale(0.15)';
-              lineEl.style.boxShadow = '0 0 0 #ffffff';
+              lineEl.style.transition = 'all 0.35s ease';
+              lineEl.style.width = '22px';
+              lineEl.style.height = '22px';
+              lineEl.style.marginLeft = '-11px';
+              lineEl.style.marginTop = '-11px';
+              lineEl.style.left = '50%';
+              lineEl.style.borderRadius = '50%';
+              lineEl.style.transform = 'scaleX(1)';
+              lineEl.style.boxShadow = `
+                0 0 60px #ffffff,
+                0 0 150px rgba(230,240,255,1),
+                0 0 280px rgba(180,210,255,0.9),
+                0 0 420px rgba(140,180,255,0.5)
+              `;
 
               setTimeout(() => {
-                const blackout = document.createElement('div');
-                blackout.style.cssText = `
-                  position: fixed; inset: 0;
-                  background: #000000;
-                  z-index: 9999999;
-                  opacity: 0;
-                  transition: opacity 1.4s ease;
-                  pointer-events: auto;
-                  cursor: default;
+                lineEl.style.transform = 'scale(1.5)';
+                lineEl.style.boxShadow = `
+                  0 0 100px #ffffff,
+                  0 0 220px rgba(230,240,255,1),
+                  0 0 420px rgba(180,210,255,0.9)
                 `;
-                document.body.appendChild(blackout);
-                requestAnimationFrame(() => { blackout.style.opacity = '1'; });
+              }, 130);
 
-                if (audioCtx && audioCtx.state === 'running') {
-                  setTimeout(() => { try { audioCtx.close(); } catch (e) {} }, 1400);
-                }
+              setTimeout(() => {
+                lineEl.style.transition = 'opacity 2s cubic-bezier(0.4, 0, 0.6, 1), transform 2s ease, box-shadow 2s ease, background 2s ease';
+                lineEl.style.opacity = '0';
+                lineEl.style.transform = 'scale(0.04)';
+                lineEl.style.background = 'rgba(160,210,255,0.95)';
+                lineEl.style.boxShadow = '0 0 0 transparent';
 
                 setTimeout(() => {
-                  window.location.href = 'clock.html';
-                }, 1700);
+                  const blackout = document.createElement('div');
+                  blackout.style.cssText = `
+                    position: fixed; inset: 0;
+                    background: #000000;
+                    z-index: 9999999;
+                    opacity: 0;
+                    transition: opacity 1.8s ease;
+                    pointer-events: auto;
+                    cursor: default;
+                  `;
+                  document.body.appendChild(blackout);
+                  requestAnimationFrame(() => { blackout.style.opacity = '1'; });
 
-              }, 900);
-            }, 220);
-          }, 560);
-        }, 900);
+                  if (audioCtx && audioCtx.state === 'running') {
+                    setTimeout(() => { try { audioCtx.close(); } catch (e) {} }, 1800);
+                  }
+
+                  setTimeout(() => {
+                    window.location.href = 'clock.html';
+                  }, 2200);
+
+                }, 1600);
+              }, 400);
+            }, 700);
+          }, 1150);
+        }, 850);
       });
     }
 
-    // ===================================================================
-    // KLIK DI SCREEN2
-    // ===================================================================
     screen2.addEventListener('click', () => {
       registerClick();
 
@@ -1328,9 +1403,6 @@ window.addEventListener('resize', () => {
       }
     });
 
-    // ===================================================================
-    // TOMBOL AGAIN / NEVER
-    // ===================================================================
     function handleChoice(choice) {
       if (!awaitingChoice) return;
       awaitingChoice = false;
@@ -1364,9 +1436,6 @@ window.addEventListener('resize', () => {
     btnAgain.addEventListener('click', (e) => { e.stopPropagation(); handleChoice('again'); });
     btnNever.addEventListener('click', (e) => { e.stopPropagation(); handleChoice('never'); });
 
-    // ===================================================================
-    // ENTER → MULAI (akses: "pi" atau "π")
-    // ===================================================================
     inputEl.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !transitioned) {
         const value = inputEl.value.trim().toLowerCase();
@@ -1395,3 +1464,4 @@ window.addEventListener('resize', () => {
   </script>
 </body>
 </html>
+
