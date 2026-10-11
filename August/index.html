@@ -1,2 +1,497 @@
-eireugg
-dkk
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>august — Taylor Swift</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    height: 100%; overflow: hidden;
+    font-family: 'Helvetica Neue', system-ui, sans-serif;
+    background: #05080d; color: #eaeaea;
+  }
+
+  /* ===== FOREST CANVAS ===== */
+  #forest {
+    position: fixed; inset: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+  }
+
+  /* ===== FOG (CSS ambient drift) ===== */
+  .fog {
+    position: fixed; inset: -30%;
+    pointer-events: none; z-index: 1;
+    will-change: transform, opacity;
+  }
+  .fog-1 {
+    background:
+      radial-gradient(ellipse 55% 28% at 28% 72%, rgba(190,205,225,0.30), transparent 70%),
+      radial-gradient(ellipse 45% 22% at 72% 62%, rgba(170,190,215,0.22), transparent 70%);
+    filter: blur(50px);
+    animation: drift1 46s ease-in-out infinite alternate;
+  }
+  .fog-2 {
+    background:
+      radial-gradient(ellipse 70% 32% at 55% 82%, rgba(210,220,235,0.24), transparent 70%),
+      radial-gradient(ellipse 40% 20% at 18% 52%, rgba(190,205,225,0.18), transparent 70%);
+    filter: blur(70px);
+    animation: drift2 62s ease-in-out infinite alternate;
+  }
+  .fog-3 {
+    background: radial-gradient(ellipse 110% 42% at 50% 102%, rgba(220,230,245,0.35), transparent 62%);
+    filter: blur(55px);
+    animation: drift3 34s ease-in-out infinite alternate;
+  }
+  @keyframes drift1 {
+    0%   { transform: translate(-4%, 0);  opacity: 0.85; }
+    100% { transform: translate( 5%,-3%); opacity: 1; }
+  }
+  @keyframes drift2 {
+    0%   { transform: translate( 3%, 2%); }
+    100% { transform: translate(-4%,-2%); }
+  }
+  @keyframes drift3 {
+    0%   { transform: translate(0) scale(1);     opacity: 0.8; }
+    100% { transform: translate(2%) scale(1.06); opacity: 1; }
+  }
+
+  /* ===== VIGNETTE + GRAIN ===== */
+  .vignette {
+    position: fixed; inset: 0; z-index: 2; pointer-events: none;
+    background: radial-gradient(ellipse at center,
+      transparent 25%, rgba(0,0,0,0.45) 75%, rgba(0,0,0,0.9) 100%);
+  }
+  .grain {
+    position: fixed; inset: 0; z-index: 2; pointer-events: none;
+    opacity: 0.06; mix-blend-mode: overlay;
+  }
+
+  /* ===== UI ===== */
+  .ui {
+    position: relative; z-index: 3;
+    height: 100%;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 36px 20px 20px;
+    gap: 18px;
+  }
+  header {
+    text-align: center;
+    text-shadow: 0 2px 24px rgba(0,0,0,0.9);
+  }
+  header h1 {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 2.1rem;
+    font-weight: 400;
+    letter-spacing: 0.12em;
+    color: #f2f4f8;
+    margin-bottom: 6px;
+  }
+  header p {
+    font-size: 0.72rem;
+    letter-spacing: 0.42em;
+    text-transform: uppercase;
+    color: #9aa3b2;
+  }
+
+  #lyrics {
+    flex: 1;
+    width: 100%; max-width: 580px;
+    overflow-y: auto;
+    scrollbar-width: none;
+    padding: 70px 20px;
+    mask-image: linear-gradient(transparent, #000 18%, #000 82%, transparent);
+    -webkit-mask-image: linear-gradient(transparent, #000 18%, #000 82%, transparent);
+  }
+  #lyrics::-webkit-scrollbar { display: none; }
+
+  .line {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 1.1rem;
+    line-height: 1.9;
+    color: rgba(210, 220, 235, 0.28);
+    padding: 7px 0;
+    text-align: center;
+    cursor: pointer;
+    transition: color .55s ease, transform .55s ease, text-shadow .55s ease;
+    text-shadow: 0 1px 12px rgba(0,0,0,0.7);
+  }
+  .line.past { color: rgba(180, 192, 210, 0.5); }
+  .line.active {
+    color: #ffffff;
+    transform: scale(1.07);
+    text-shadow:
+      0 0 26px rgba(200, 220, 255, 0.55),
+      0 0 8px rgba(255, 255, 255, 0.35),
+      0 2px 16px rgba(0,0,0,0.9);
+  }
+
+  /* ===== PLAYER ===== */
+  .player {
+    width: 100%; max-width: 580px;
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px 18px;
+    background: rgba(12, 18, 28, 0.55);
+    backdrop-filter: blur(22px) saturate(140%);
+    -webkit-backdrop-filter: blur(22px) saturate(140%);
+    border-radius: 40px;
+    border: 1px solid rgba(255,255,255,0.07);
+    box-shadow: 0 12px 44px rgba(0,0,0,0.55);
+  }
+  #playBtn {
+    width: 46px; height: 46px;
+    border-radius: 50%; border: none;
+    background: linear-gradient(135deg, #eef1f6, #b6c0d0);
+    color: #0a0e15;
+    font-size: 15px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: transform .2s, box-shadow .2s;
+    padding-left: 3px;
+  }
+  #playBtn:hover { transform: scale(1.07); box-shadow: 0 0 22px rgba(200,220,255,0.45); }
+  #playBtn.playing { padding-left: 0; }
+
+  .progress {
+    flex: 1; height: 4px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px; cursor: pointer;
+    position: relative; overflow: hidden;
+  }
+  #bar {
+    height: 100%; width: 0;
+    background: linear-gradient(90deg, #9fb6d8, #eef1f6);
+    border-radius: 2px;
+    transition: width .12s linear;
+  }
+  #time {
+    font-size: 0.75rem;
+    color: #98a2b3;
+    font-variant-numeric: tabular-nums;
+    min-width: 78px; text-align: right;
+  }
+
+  /* fallback upload */
+  #lrcFallback {
+    display: none;
+    font-size: 0.8rem;
+    color: #98a2b3;
+    text-align: center;
+    padding: 8px 14px;
+    background: rgba(200,60,60,0.15);
+    border: 1px solid rgba(200,80,80,0.3);
+    border-radius: 10px;
+  }
+  #lrcFallback input { margin-left: 8px; color: #ddd; }
+</style>
+</head>
+<body>
+
+<canvas id="forest"></canvas>
+<div class="fog fog-1"></div>
+<div class="fog fog-2"></div>
+<div class="fog fog-3"></div>
+<canvas class="grain" id="grain"></canvas>
+<div class="vignette"></div>
+
+<main class="ui">
+  <header>
+    <h1>august</h1>
+    <p>Taylor Swift</p>
+  </header>
+
+  <div id="lyrics"></div>
+
+  <div id="lrcFallback">
+    ⚠ Gagal memuat <b>August.lrc</b> — pilih manual:
+    <input type="file" id="lrcInput" accept=".lrc,.txt">
+  </div>
+
+  <div class="player">
+    <button id="playBtn" aria-label="Play">▶</button>
+    <div class="progress" id="progress"><div id="bar"></div></div>
+    <span id="time">0:00 / 0:00</span>
+  </div>
+</main>
+
+<audio id="audio" src="August.mp3" preload="metadata"></audio>
+
+<script>
+/* =========================================================
+   1. FOREST — foggy pine silhouettes on canvas
+   ========================================================= */
+const canvas = document.getElementById('forest');
+const ctx = canvas.getContext('2d');
+let W, H;
+
+const DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+// deterministic random so tree layout is consistent
+let seed = 99321;
+function rand() {
+  seed = (seed * 9301 + 49297) % 233280;
+  return seed / 233280;
+}
+
+function drawPine(cx, baseY, height, halfWidth, color) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(cx, baseY - height);
+  const segs = 16;
+  // right edge going down (jagged)
+  for (let i = 1; i <= segs; i++) {
+    const t = i / segs;
+    const y = baseY - height + t * height;
+    const w = halfWidth * Math.pow(t, 0.72) * (0.82 + rand() * 0.36);
+    ctx.lineTo(cx + w, y - height * 0.02 * rand());
+  }
+  ctx.lineTo(cx + halfWidth * 0.12, baseY);
+  ctx.lineTo(cx - halfWidth * 0.12, baseY);
+  // left edge going up
+  for (let i = segs; i >= 1; i--) {
+    const t = i / segs;
+    const y = baseY - height + t * height;
+    const w = halfWidth * Math.pow(t, 0.72) * (0.82 + rand() * 0.36);
+    ctx.lineTo(cx - w, y - height * 0.02 * rand());
+  }
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawFogPatch(x, y, r, alpha) {
+  const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, `rgba(185, 200, 220, ${alpha})`);
+  g.addColorStop(1, 'rgba(185, 200, 220, 0)');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawForest() {
+  seed = 99321; // reset for consistent layout
+
+  // --- sky ---
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0,    '#0b131e');
+  sky.addColorStop(0.55, '#111a27');
+  sky.addColorStop(1,    '#080c13');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, W, H);
+
+  // --- soft light from above (god ray hint) ---
+  const beam = ctx.createRadialGradient(W * 0.5, -H * 0.15, 0, W * 0.5, -H * 0.15, H * 0.9);
+  beam.addColorStop(0,   'rgba(160, 190, 230, 0.22)');
+  beam.addColorStop(0.5, 'rgba(130, 160, 200, 0.06)');
+  beam.addColorStop(1,   'rgba(130, 160, 200, 0)');
+  ctx.fillStyle = beam;
+  ctx.fillRect(0, 0, W, H);
+
+  // --- Layer 1: far pines ---
+  for (let i = 0; i < 20; i++) {
+    const x  = (i / 20 + (rand() - 0.5) * 0.07) * W;
+    const h  = H * (0.32 + rand() * 0.12);
+    const w  = h * (0.20 + rand() * 0.10);
+    const by = H * (0.72 + rand() * 0.06);
+    drawPine(x, by, h, w, 'rgba(48, 58, 76, 0.85)');
+  }
+  // fog between layers
+  for (let i = 0; i < 16; i++) {
+    drawFogPatch(rand() * W, H * (0.58 + rand() * 0.30),
+                 H * (0.20 + rand() * 0.22), 0.14);
+  }
+
+  // --- Layer 2: mid pines ---
+  for (let i = 0; i < 14; i++) {
+    const x  = (i / 14 + (rand() - 0.5) * 0.08) * W;
+    const h  = H * (0.48 + rand() * 0.16);
+    const w  = h * (0.20 + rand() * 0.10);
+    const by = H * (0.82 + rand() * 0.06);
+    drawPine(x, by, h, w, 'rgba(22, 29, 40, 0.95)');
+  }
+  for (let i = 0; i < 12; i++) {
+    drawFogPatch(rand() * W, H * (0.70 + rand() * 0.24),
+                 H * (0.16 + rand() * 0.22), 0.18);
+  }
+
+  // --- Layer 3: near pines (near black) ---
+  for (let i = 0; i < 8; i++) {
+    const x  = (i / 8 + (rand() - 0.5) * 0.10) * W;
+    const h  = H * (0.72 + rand() * 0.24);
+    const w  = h * (0.20 + rand() * 0.10);
+    const by = H * (0.98 + rand() * 0.08);
+    drawPine(x, by, h, w, 'rgba(4, 6, 11, 1)');
+  }
+
+  // --- ground mist at bottom ---
+  const mist = ctx.createLinearGradient(0, H * 0.72, 0, H);
+  mist.addColorStop(0,   'rgba(180, 195, 215, 0)');
+  mist.addColorStop(0.75,'rgba(180, 195, 215, 0.15)');
+  mist.addColorStop(1,   'rgba(200, 210, 228, 0.32)');
+  ctx.fillStyle = mist;
+  ctx.fillRect(0, H * 0.72, W, H * 0.28);
+}
+
+function resize() {
+  W = canvas.width  = window.innerWidth  * DPR;
+  H = canvas.height = window.innerHeight * DPR;
+  canvas.style.width  = window.innerWidth  + 'px';
+  canvas.style.height = window.innerHeight + 'px';
+  drawForest();
+}
+window.addEventListener('resize', resize);
+resize();
+
+/* =========================================================
+   2. GRAIN OVERLAY
+   ========================================================= */
+(function makeGrain() {
+  const g = document.getElementById('grain');
+  g.width = 160; g.height = 160;
+  const gx = g.getContext('2d');
+  const img = gx.createImageData(160, 160);
+  for (let i = 0; i < img.data.length; i += 4) {
+    const v = Math.random() * 255 | 0;
+    img.data[i] = img.data[i+1] = img.data[i+2] = v;
+    img.data[i+3] = 255;
+  }
+  gx.putImageData(img, 0, 0);
+  g.style.width = g.style.height = '100%';
+  g.style.imageRendering = 'pixelated';
+})();
+
+/* =========================================================
+   3. LRC PARSER + SYNC
+   ========================================================= */
+const audio     = document.getElementById('audio');
+const lyricsBox = document.getElementById('lyrics');
+const playBtn   = document.getElementById('playBtn');
+const bar       = document.getElementById('bar');
+const progress  = document.getElementById('progress');
+const timeEl    = document.getElementById('time');
+const fallback  = document.getElementById('lrcFallback');
+
+let lines = [];
+let activeIndex = -1;
+
+function parseLRC(text) {
+  const out = [];
+  const re = /\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)/;
+  text.split(/\r?\n/).forEach(line => {
+    const m = line.match(re);
+    if (!m) return;
+    const t = (+m[1]) * 60 + (+m[2]) + (+m[3].padEnd(3, '0')) / 1000;
+    const txt = m[4].trim();
+    if (txt) out.push({ time: t, text: txt });
+  });
+  return out.sort((a, b) => a.time - b.time);
+}
+
+function renderLRC(text) {
+  lines = parseLRC(text);
+  lyricsBox.innerHTML = '';
+  lines.forEach(l => {
+    const d = document.createElement('div');
+    d.className = 'line';
+    d.textContent = l.text;
+    d.addEventListener('click', () => {
+      audio.currentTime = l.time;
+      if (audio.paused) audio.play();
+    });
+    lyricsBox.appendChild(d);
+    l.el = d;
+  });
+  activeIndex = -1;
+}
+
+function syncLyrics() {
+  const t = audio.currentTime;
+  let idx = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (t >= lines[i].time) idx = i; else break;
+  }
+  if (idx === activeIndex) return;
+
+  // clear old active
+  if (activeIndex >= 0 && lines[activeIndex]) {
+    lines[activeIndex].el.classList.remove('active');
+    lines[activeIndex].el.classList.add('past');
+  }
+  // reset future lines
+  for (let i = idx + 1; i < lines.length; i++) {
+    lines[i].el.classList.remove('active', 'past');
+  }
+  // set new active
+  if (idx >= 0) {
+    lines[idx].el.classList.remove('past');
+    lines[idx].el.classList.add('active');
+    lines[idx].el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  activeIndex = idx;
+}
+
+function fmt(s) {
+  if (!isFinite(s)) return '0:00';
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60).toString().padStart(2, '0');
+  return m + ':' + sec;
+}
+
+/* ---------- events ---------- */
+audio.addEventListener('timeupdate', () => {
+  syncLyrics();
+  if (audio.duration) {
+    bar.style.width = (audio.currentTime / audio.duration * 100) + '%';
+    timeEl.textContent = fmt(audio.currentTime) + ' / ' + fmt(audio.duration);
+  }
+});
+
+audio.addEventListener('loadedmetadata', () => {
+  timeEl.textContent = '0:00 / ' + fmt(audio.duration);
+});
+
+playBtn.addEventListener('click', () => {
+  audio.paused ? audio.play() : audio.pause();
+});
+audio.addEventListener('play',  () => { playBtn.textContent = '❚❚'; playBtn.classList.add('playing'); });
+audio.addEventListener('pause', () => { playBtn.textContent = '▶'; playBtn.classList.remove('playing'); });
+
+progress.addEventListener('click', e => {
+  const r = progress.getBoundingClientRect();
+  const pct = (e.clientX - r.left) / r.width;
+  if (audio.duration) audio.currentTime = pct * audio.duration;
+});
+
+/* ---------- load LRC ---------- */
+function loadLRC() {
+  fetch('August.lrc', { cache: 'no-store' })
+    .then(r => {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.text();
+    })
+    .then(txt => {
+      renderLRC(txt);
+      fallback.style.display = 'none';
+    })
+    .catch(err => {
+      console.warn('Gagal fetch August.lrc:', err.message);
+      fallback.style.display = 'block';
+    });
+}
+loadLRC();
+
+/* fallback: user pilih file manual */
+document.getElementById('lrcInput').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    renderLRC(ev.target.result);
+    fallback.style.display = 'none';
+  };
+  reader.readAsText(f, 'UTF-8');
+});
+</script>
+</body>
+</html>
