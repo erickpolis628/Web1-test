@@ -7,6 +7,27 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;600&display=swap');
     * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ============ ANTI-COPY ============ */
+    html, body {
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    input, textarea {
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
+    img, canvas, * {
+      -webkit-user-drag: none;
+    }
+
     body, html {
       width: 100%; height: 100%; overflow: hidden;
       background-color: #030308;
@@ -37,36 +58,50 @@
       letter-spacing: 0.1rem; max-width: 320px; line-height: 1.6;
     }
 
-    /* ====== SCREEN 1: Input kode ====== */
     #screen1 {
       position: absolute; top: 0; left: 0;
       width: 100%; height: 100%; z-index: 2;
       display: flex; flex-direction: column;
       justify-content: center; align-items: center;
-      opacity: 1; visibility: visible;
-      transition: opacity 1.1s ease, visibility 1.1s ease;
+      opacity: 1; pointer-events: auto;
+      transition: opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    #screen1.hidden {
-      opacity: 0; visibility: hidden; pointer-events: none;
-    }
+    #screen1.hidden { opacity: 0; pointer-events: none; }
 
     .input-wrapper {
       position: relative; display: flex;
       flex-direction: column; align-items: center;
     }
+
     .secret-input {
       background: transparent; border: none; outline: none;
-      color: rgba(255,255,255,0.9);
+      color: transparent;
+      -webkit-text-fill-color: transparent;
       font-family: 'Space Grotesk', monospace;
       font-size: 2.2rem; letter-spacing: 0.6rem;
       text-align: center; padding: 10px 20px;
       width: 280px;
-      caret-color: transparent; /* <<< garis ketik disembunyikan */
+      caret-color: transparent !important;
+      -webkit-caret-color: transparent !important;
     }
-    .secret-input::placeholder {
+
+    .display-text {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      font-family: 'Space Grotesk', monospace;
+      font-size: 2.2rem; letter-spacing: 0.6rem;
+      text-align: center;
+      color: rgba(255,255,255,0.9);
+      white-space: nowrap;
+      user-select: none;
+    }
+    .display-text.placeholder {
       color: rgba(255,255,255,0.35);
       letter-spacing: 0.5rem;
     }
+
     .error-msg {
       position: absolute; top: 100%; margin-top: 15px;
       color: #ff3344; font-size: 0.85rem;
@@ -78,18 +113,17 @@
     }
     .error-msg.visible { opacity: 1; }
 
-    /* ====== SCREEN 2: Are You Sure? ====== */
     #screen2 {
       position: absolute; top: 0; left: 0;
       width: 100%; height: 100%; z-index: 3;
       display: flex; flex-direction: column;
       justify-content: center; align-items: center;
-      opacity: 0; visibility: hidden;
-      transition: opacity 1.4s ease, visibility 1.4s ease;
-      pointer-events: none;
+      opacity: 0; pointer-events: none;
+      transition: opacity 1.4s cubic-bezier(0.4, 0, 0.2, 1) 0.25s;
+      cursor: pointer;
     }
     #screen2.active {
-      opacity: 1; visibility: visible; pointer-events: auto;
+      opacity: 1; pointer-events: auto;
     }
 
     .screen2-text {
@@ -101,7 +135,6 @@
       padding-left: 0.35rem;
     }
 
-    /* Kursor berkedip di akhir ketikan */
     .type-cursor {
       display: inline-block; width: 3px; height: 1em;
       background-color: #ffffff; margin-left: 4px;
@@ -111,7 +144,7 @@
       border-radius: 2px;
     }
     .type-cursor.hidden { display: none; }
-    .type-cursor.finished { animation: cursorFadeOut 1.2s ease-out forwards; }
+    .type-cursor.finished { animation: cursorFadeOut 1.5s ease-out forwards; }
 
     @keyframes cursorBlink {
       0%, 45% { opacity: 1; }
@@ -142,20 +175,46 @@
     <p class="mobile-desc">Not everything is visible on your vision</p>
   </div>
 
-  <!-- ====== SCREEN 1 ====== -->
   <div id="screen1">
     <div class="input-wrapper">
-      <input type="text" id="codeInput" class="secret-input" placeholder="......" autocomplete="off" spellcheck="false" maxlength="20">
+      <div class="display-text placeholder" id="displayText">......</div>
+      <input type="text" id="codeInput" class="secret-input" autocomplete="off" spellcheck="false" maxlength="20">
       <div id="errorMsg" class="error-msg">Access Denied</div>
     </div>
   </div>
 
-  <!-- ====== SCREEN 2 ====== -->
   <div id="screen2">
     <h1 class="screen2-text"><span id="typedTarget"></span><span class="type-cursor hidden" id="typeCursor"></span></h1>
   </div>
 
   <script>
+    // ===================================================================
+    // ANTI-COPY PROTECTION
+    // ===================================================================
+    (function () {
+      document.addEventListener('contextmenu', (e) => e.preventDefault());
+      document.addEventListener('selectstart', (e) => e.preventDefault());
+      document.addEventListener('dragstart', (e) => e.preventDefault());
+      document.addEventListener('copy', (e) => e.preventDefault());
+      document.addEventListener('cut', (e) => e.preventDefault());
+
+      document.addEventListener('keydown', (e) => {
+        const k = (e.key || '').toLowerCase();
+        if ((e.ctrlKey || e.metaKey) && ['c','a','x','u','s','p'].includes(k)) {
+          e.preventDefault();
+          return false;
+        }
+        if (e.key === 'F12') {
+          e.preventDefault();
+          return false;
+        }
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && ['i','j','c'].includes(k)) {
+          e.preventDefault();
+          return false;
+        }
+      }, true);
+    })();
+
     // ===================================================================
     // DETEKSI PERANGKAT
     // ===================================================================
@@ -181,7 +240,7 @@
     })();
 
     // ===================================================================
-    // AUDIO — tidak pernah restart, karena halaman tidak pernah reload
+    // AUDIO
     // ===================================================================
     let audioCtx = null, isAudioActive = false;
 
@@ -268,13 +327,26 @@
       osc.start(now); osc.stop(now + 0.06);
     }
 
+    function playDeleteTick() {
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(700 + Math.random() * 200, now);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.linearRampToValueAtTime(0.015, now + 0.004);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.04);
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.start(now); osc.stop(now + 0.05);
+    }
+
     window.addEventListener('click', initAudio);
     window.addEventListener('keydown', initAudio);
     window.addEventListener('touchstart', initAudio);
     window.addEventListener('mousemove', initAudio, { once: true });
 
     // ===================================================================
-    // CANVAS STARFIELD — JALAN TERUS TANPA HENTI
+    // CANVAS STARFIELD
     // ===================================================================
     const canvas = document.getElementById('space-canvas');
     const ctx = canvas.getContext('2d');
@@ -387,16 +459,28 @@
     animate();
 
     // ===================================================================
-    // LOGIKA INPUT & TRANSISI
+    // INPUT & DISPLAY TEKS
     // ===================================================================
     const inputEl = document.getElementById('codeInput');
+    const displayText = document.getElementById('displayText');
     const errorEl = document.getElementById('errorMsg');
     const screen1 = document.getElementById('screen1');
     const screen2 = document.getElementById('screen2');
     const typedTarget = document.getElementById('typedTarget');
     const typeCursor = document.getElementById('typeCursor');
-    let typingStarted = false;
-    let transitioned = false;
+
+    function syncDisplay() {
+      const val = inputEl.value;
+      if (val.length === 0) {
+        displayText.textContent = '......';
+        displayText.classList.add('placeholder');
+      } else {
+        displayText.textContent = val;
+        displayText.classList.remove('placeholder');
+      }
+    }
+    inputEl.addEventListener('input', syncDisplay);
+    syncDisplay();
 
     function triggerGlitch() {
       isGlitching = true; glitchDuration = 20;
@@ -405,14 +489,33 @@
       setTimeout(() => errorEl.classList.remove('visible'), 1800);
     }
 
-    function typeText(text) {
-      if (typingStarted) return;
-      typingStarted = true;
+    // ===================================================================
+    // ANIMASI KETIK & HAPUS — TANPA LOOP
+    // ===================================================================
+    const phrases = [
+      "Are you ready?",
+      "Do you believe what you see?",
+      "Do we need secret?",
+      "Thanks."
+    ];
+    let phraseIndex = 0;
+    let finished = false;
+    let state = 'idle';
+    let transitioned = false;
+
+    function typeText(text, isFinal) {
+      state = 'typing';
       typeCursor.classList.remove('hidden');
+      typeCursor.classList.remove('finished');
       let i = 0;
+
       function step() {
         if (i >= text.length) {
-          setTimeout(() => typeCursor.classList.add('finished'), 550);
+          if (isFinal) {
+            finished = true;
+            setTimeout(() => typeCursor.classList.add('finished'), 550);
+          }
+          state = 'idle';
           return;
         }
         const ch = text.charAt(i);
@@ -422,14 +525,60 @@
         typedTarget.appendChild(span);
         if (ch !== ' ') playTypeTick();
         i++;
+
         let delay = 85 + Math.random() * 55;
         if (ch === ' ') delay = 60 + Math.random() * 30;
         if (ch === ',' || ch === '.') delay += 180;
         setTimeout(step, delay);
       }
-      setTimeout(step, 450);
+      setTimeout(step, 300);
     }
 
+    function deleteText(onDone) {
+      state = 'deleting';
+      function step() {
+        const last = typedTarget.lastElementChild;
+        if (!last) {
+          state = 'idle';
+          onDone && onDone();
+          return;
+        }
+        last.style.transition = 'opacity 0.12s ease, transform 0.12s ease, filter 0.12s ease';
+        last.style.opacity = '0';
+        last.style.transform = 'translateY(-8px) scale(0.7)';
+        last.style.filter = 'blur(3px)';
+        setTimeout(() => last.remove(), 110);
+
+        playDeleteTick();
+        setTimeout(step, 45);
+      }
+      step();
+    }
+
+    document.addEventListener('click', () => {
+      if (!transitioned) {
+        inputEl.focus();
+        return;
+      }
+      if (finished) return;
+      if (state !== 'idle') return;
+      if (phraseIndex >= phrases.length) return;
+
+      const nextText = phrases[phraseIndex];
+      const isFinal = (phraseIndex === phrases.length - 1);
+      phraseIndex++;
+
+      state = 'waiting';
+      deleteText(() => {
+        setTimeout(() => {
+          typeText(nextText, isFinal);
+        }, 280);
+      });
+    });
+
+    // ===================================================================
+    // ENTER → TRANSISI KE SCREEN 2
+    // ===================================================================
     inputEl.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !transitioned) {
         const value = inputEl.value.trim();
@@ -437,30 +586,21 @@
           transitioned = true;
           playSuccessSound();
           errorEl.classList.remove('visible');
+          inputEl.blur();
 
-          // Fade screen1 keluar (starfield tetap jalan di belakang)
           screen1.classList.add('hidden');
+          screen2.classList.add('active');
 
-          // Setelah jeda kecil, fade screen2 masuk
           setTimeout(() => {
-            screen2.classList.add('active');
-          }, 500);
-
-          // Setelah screen2 muncul, mulai mengetik
-          setTimeout(() => {
-            typeText('Are You Sure?');
-          }, 1300);
+            typeText('Are You Sure?', false);
+          }, 900);
         } else {
           triggerGlitch();
         }
       }
     });
 
-    // Fokus otomatis
     window.addEventListener('load', () => inputEl.focus());
-    document.addEventListener('click', () => {
-      if (!transitioned) inputEl.focus();
-    });
   </script>
 </body>
 </html>
