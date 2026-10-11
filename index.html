@@ -126,6 +126,7 @@
       text-shadow: 0 0 20px rgba(255,255,255,0.9), 0 0 40px rgba(200,220,255,0.4);
       z-index: 10; white-space: nowrap;
       padding-left: 0.35rem;
+      min-height: 1em;
     }
 
     .type-cursor {
@@ -135,12 +136,12 @@
       box-shadow: 0 0 10px rgba(255,255,255,0.9), 0 0 20px rgba(200,220,255,0.6);
       animation: cursorBlink 0.85s ease-in-out infinite;
       border-radius: 2px;
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      transition: transform 0.35s ease, box-shadow 0.35s ease;
     }
     .type-cursor.hidden { display: none; }
     .type-cursor.finished { animation: cursorFadeOut 1.5s ease-out forwards; }
 
-    /* Saat menunggu klik, cursor sedikit membesar & menyala → kode "klik di sini" */
+    /* Saat siap diklik, cursor sedikit membesar & menyala */
     .type-cursor.ready {
       transform: scale(1.4);
       box-shadow: 0 0 14px rgba(255,255,255,1), 0 0 28px rgba(200,220,255,0.9);
@@ -192,82 +193,28 @@
     // ANTI-COPY PROTECTION (super ketat)
     // ===================================================================
     (function () {
-      // 1. Blokir klik kanan
-      document.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
-      }, true);
-
-      // 2. Blokir seleksi via drag / mouse
-      document.addEventListener('selectstart', (e) => {
-        e.preventDefault();
-        return false;
-      }, true);
-      document.addEventListener('mousedown', (e) => {
-        // Biarkan klik biasa berjalan, hanya cegah kalau tujuannya untuk seleksi
-        if (e.detail > 1) { // double-click → seleksi kata
-          e.preventDefault();
-          return false;
-        }
-      }, true);
-
-      // 3. Blokir drag
-      document.addEventListener('dragstart', (e) => {
-        e.preventDefault();
-        return false;
-      }, true);
-      document.addEventListener('drop', (e) => {
-        e.preventDefault();
-        return false;
-      }, true);
-
-      // 4. Blokir copy / cut / paste
-      document.addEventListener('copy', (e) => {
-        e.preventDefault();
-        if (e.clipboardData) e.clipboardData.setData('text/plain', '');
-        return false;
-      }, true);
-      document.addEventListener('cut', (e) => {
-        e.preventDefault();
-        if (e.clipboardData) e.clipboardData.setData('text/plain', '');
-        return false;
-      }, true);
+      document.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); return false; }, true);
+      document.addEventListener('selectstart', (e) => { e.preventDefault(); return false; }, true);
+      document.addEventListener('mousedown', (e) => { if (e.detail > 1) { e.preventDefault(); return false; } }, true);
+      document.addEventListener('dragstart', (e) => { e.preventDefault(); return false; }, true);
+      document.addEventListener('drop', (e) => { e.preventDefault(); return false; }, true);
+      document.addEventListener('copy', (e) => { e.preventDefault(); if (e.clipboardData) e.clipboardData.setData('text/plain', ''); return false; }, true);
+      document.addEventListener('cut', (e) => { e.preventDefault(); if (e.clipboardData) e.clipboardData.setData('text/plain', ''); return false; }, true);
       document.addEventListener('paste', (e) => e.preventDefault(), true);
 
-      // 5. Blokir shortcut keyboard
       document.addEventListener('keydown', (e) => {
         const k = (e.key || '').toLowerCase();
-
-        // Ctrl/Cmd + C, A, X, U, S, P
         if ((e.ctrlKey || e.metaKey) && ['c','a','x','u','s','p'].includes(k)) {
-          e.preventDefault();
-          e.stopPropagation();
-          return false;
+          e.preventDefault(); e.stopPropagation(); return false;
         }
-        // F12 (DevTools)
-        if (e.key === 'F12') {
-          e.preventDefault();
-          return false;
-        }
-        // Ctrl+Shift+I / J / C (DevTools)
-        if ((e.ctrlKey || e.metaKey) && e.shiftKey && ['i','j','c'].includes(k)) {
-          e.preventDefault();
-          return false;
-        }
-        // Ctrl+U versi uppercase
-        if ((e.ctrlKey || e.metaKey) && e.key === 'U') {
-          e.preventDefault();
-          return false;
-        }
+        if (e.key === 'F12') { e.preventDefault(); return false; }
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && ['i','j','c'].includes(k)) { e.preventDefault(); return false; }
+        if ((e.ctrlKey || e.metaKey) && e.key === 'U') { e.preventDefault(); return false; }
       }, true);
 
-      // 6. Bersihkan seleksi apapun secara berkala (kalau lolos dari proteksi)
       setInterval(() => {
         const sel = window.getSelection && window.getSelection();
-        if (sel && sel.rangeCount > 0 && String(sel).length > 0) {
-          sel.removeAllRanges();
-        }
+        if (sel && sel.rangeCount > 0 && String(sel).length > 0) sel.removeAllRanges();
       }, 200);
     })();
 
@@ -538,7 +485,6 @@
     inputEl.addEventListener('input', syncDisplay);
     syncDisplay();
 
-    // Fokus input saat klik area screen1
     screen1.addEventListener('click', () => {
       if (!transitioned) inputEl.focus();
     });
@@ -551,38 +497,56 @@
     }
 
     // ===================================================================
-    // STATE MACHINE — ANIMASI KETIK & HAPUS (TANPA LOOP)
+    // STATE MACHINE — KETIK / HAPUS BERGANTIAN TIAP KLIK
     // ===================================================================
+    // Urutan (setelah intro "Are You Sure?" auto-ketik):
+    //   klik 1 → hapus intro
+    //   klik 2 → ketik "Do you believe what you see?"
+    //   klik 3 → hapus
+    //   klik 4 → ketik "Do we need secret?"
+    //   klik 5 → hapus
+    //   klik 6 → ketik "Thanks."
+    //   klik 7+ → selesai (tidak ada reaksi)
     const phrases = [
-      "Are you ready?",
       "Do you believe what you see?",
       "Do we need secret?",
       "Thanks."
     ];
-    let phraseIndex = 0;
+
+    let phraseIndex = 0;         // index frasa berikutnya yang akan diketik
+    let mode = 'delete';         // aksi berikutnya saat klik: 'delete' | 'type'
+    let state = 'idle';          // 'idle' | 'typing' | 'deleting'
     let finished = false;
-    let state = 'idle';          // 'idle' | 'typing' | 'deleting' | 'waiting'
     let transitioned = false;
 
-    function typeText(text, isFinal) {
+    function setCursorReady(isReady) {
+      if (isReady) typeCursor.classList.add('ready');
+      else typeCursor.classList.remove('ready');
+    }
+
+    // Ketik teks huruf per huruf
+    function typeText(text, isFinal, onDone) {
       state = 'typing';
+      setCursorReady(false);
       typeCursor.classList.remove('hidden');
       typeCursor.classList.remove('finished');
-      typeCursor.classList.remove('ready');
+
       let i = 0;
 
       function step() {
         if (i >= text.length) {
+          state = 'idle';
           if (isFinal) {
             finished = true;
+            // Kursor memudar sebagai tanda cerita selesai
             setTimeout(() => typeCursor.classList.add('finished'), 550);
           } else {
-            // Tandai "siap diklik" — cursor membesar sedikit
-            typeCursor.classList.add('ready');
+            setCursorReady(true);
           }
-          state = 'idle';
+          onDone && onDone();
           return;
         }
+
         const ch = text.charAt(i);
         const span = document.createElement('span');
         span.className = 'typed-char';
@@ -599,9 +563,11 @@
       setTimeout(step, 300);
     }
 
+    // Hapus teks huruf per huruf dari belakang
     function deleteText(onDone) {
       state = 'deleting';
-      typeCursor.classList.remove('ready');
+      setCursorReady(false);
+
       function step() {
         const last = typedTarget.lastElementChild;
         if (!last) {
@@ -622,23 +588,41 @@
     }
 
     // ===================================================================
-    // KLIK DI SCREEN2 → LANJUT KE FRASA BERIKUTNYA
+    // KLIK DI SCREEN2 → SATU AKSI (KETIK ATAU HAPUS)
     // ===================================================================
     screen2.addEventListener('click', () => {
       if (finished) return;
       if (state !== 'idle') return;
-      if (phraseIndex >= phrases.length) return;
 
-      const nextText = phrases[phraseIndex];
-      const isFinal = (phraseIndex === phrases.length - 1);
-      phraseIndex++;
+      if (mode === 'delete') {
+        // Aksi: hapus teks saat ini
+        deleteText(() => {
+          // Siap untuk aksi berikutnya = ketik
+          mode = 'type';
+          // Kalau sudah tidak ada frasa tersisa, tandai selesai
+          if (phraseIndex >= phrases.length) {
+            finished = true;
+            setCursorReady(false);
+            setTimeout(() => typeCursor.classList.add('finished'), 300);
+          } else {
+            setCursorReady(true);
+          }
+        });
+      } else {
+        // Aksi: ketik frasa berikutnya
+        if (phraseIndex >= phrases.length) {
+          finished = true;
+          return;
+        }
+        const nextText = phrases[phraseIndex];
+        const isLast = (phraseIndex === phrases.length - 1);
+        phraseIndex++;
 
-      state = 'waiting';
-      deleteText(() => {
-        setTimeout(() => {
-          typeText(nextText, isFinal);
-        }, 280);
-      });
+        typeText(nextText, isLast, () => {
+          // Setelah selesai mengetik, aksi berikutnya = hapus
+          mode = 'delete';
+        });
+      }
     });
 
     // ===================================================================
@@ -657,7 +641,10 @@
           screen2.classList.add('active');
 
           setTimeout(() => {
-            typeText('Are You Sure?', false);
+            typeText('Are You Sure?', false, () => {
+              // Setelah intro selesai, mode siap hapus
+              mode = 'delete';
+            });
           }, 900);
         } else {
           triggerGlitch();
@@ -669,4 +656,3 @@
   </script>
 </body>
 </html>
-
